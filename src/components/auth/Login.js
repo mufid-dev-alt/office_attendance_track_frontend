@@ -7,8 +7,9 @@ import {
   Button,
   Typography,
   InputAdornment,
-  Switch,
-  FormControlLabel
+  Paper,
+  useTheme,
+  Link
 } from '@mui/material';
 import {
   Email as EmailIcon,
@@ -19,56 +20,85 @@ import { API_ENDPOINTS } from '../../config/api';
 
 const Login = () => {
   const navigate = useNavigate();
+  const theme = useTheme();
+  const [activeTab, setActiveTab] = useState('user'); // 'user' or 'admin'
   const [formData, setFormData] = useState({
     email: '',
-    password: '',
-    isAdmin: false
+    password: ''
   });
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
+    setError('');
+
+    if (!formData.email || !formData.password) {
+      setError('Please fill both fields');
+      setLoading(false);
+      return;
+    }
 
     const loginUrl = `${API_ENDPOINTS.auth.login}?email=${formData.email}&password=${formData.password}`;
     
-    const response = await fetch(loginUrl, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-      },
-      mode: 'cors'
-    });
+    try {
+      const response = await fetch(loginUrl, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        mode: 'cors'
+      });
 
-    const data = await response.json();
+      const data = await response.json();
 
-    if (data && data.success && data.user) {
-      // Check admin access
-      if (formData.isAdmin && data.user.role !== 'admin') {
-        setLoading(false);
-        return;
-      }
+      if (data && data.success && data.user) {
+        // Check if user role matches selected tab
+        if (activeTab === 'admin' && data.user.role !== 'admin') {
+          setError('Admin access required. Please use User login.');
+          setLoading(false);
+          return;
+        }
+        
+        if (activeTab === 'user' && data.user.role === 'admin') {
+          setError('Please use Admin login for administrative access.');
+          setLoading(false);
+          return;
+        }
 
-      localStorage.setItem('user', JSON.stringify(data.user));
-      
-      // Navigate based on role
-      if (data.user.role === 'admin') {
-        navigate('/admin');
+        localStorage.setItem('user', JSON.stringify(data.user));
+        
+        // Navigate based on role
+        if (data.user.role === 'admin') {
+          navigate('/admin');
+        } else {
+          navigate('/dashboard');
+        }
       } else {
-        navigate('/dashboard');
+        setError('Invalid email or password');
       }
+    } catch (error) {
+      setError('Login failed. Please try again.');
+    } finally {
+      setLoading(false);
     }
-    
-    setLoading(false);
   };
 
   const handleChange = (e) => {
-    const { name, value, checked } = e.target;
+    const { name, value } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: name === 'isAdmin' ? checked : value
+      [name]: value
     }));
+    setError(''); // Clear error when user types
+  };
+
+  const switchTab = (tab) => {
+    setActiveTab(tab);
+    setFormData({ email: '', password: '' });
+    setError('');
   };
 
   return (
@@ -86,19 +116,20 @@ const Login = () => {
     >
       {/* Background Title */}
       <Typography
-        variant="h2"
+        variant="h1"
         sx={{
           position: 'absolute',
-          top: '10%',
+          top: '15%',
           left: '50%',
           transform: 'translateX(-50%)',
-          color: 'rgba(255, 255, 255, 0.1)',
+          color: 'rgba(255, 255, 255, 0.08)',
           fontWeight: 900,
-          fontSize: { xs: '2rem', sm: '3rem', md: '4rem' },
+          fontSize: { xs: '1.5rem', sm: '2rem', md: '2.5rem', lg: '3rem' },
           textAlign: 'center',
           whiteSpace: 'nowrap',
           userSelect: 'none',
-          zIndex: 0
+          zIndex: 0,
+          letterSpacing: '0.1em'
         }}
       >
         OFFICE ATTENDANCE MANAGEMENT SYSTEM
@@ -115,6 +146,7 @@ const Login = () => {
           zIndex: 1
         }}
       >
+        {/* Header */}
         <Box
           sx={{
             background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
@@ -127,39 +159,73 @@ const Login = () => {
             DCM Infotech
           </Typography>
           <Typography variant="h6" sx={{ opacity: 0.9, fontWeight: 400 }}>
-            Enter your {formData.isAdmin ? 'Admin' : 'User'} credentials
+            Enter your {activeTab === 'admin' ? 'Admin' : 'User'} credentials
           </Typography>
         </Box>
 
-        <CardContent sx={{ p: 4 }}>
-          <form onSubmit={handleSubmit}>
-            {/* User/Admin Switch */}
-            <Box sx={{ display: 'flex', justifyContent: 'center', mb: 3 }}>
-              <FormControlLabel
-                control={
-                  <Switch
-                    name="isAdmin"
-                    checked={formData.isAdmin}
-                    onChange={handleChange}
-                    color="primary"
-                  />
-                }
-                label={
-                  <Typography sx={{ fontWeight: 500 }}>
-                    {formData.isAdmin ? 'Admin' : 'User'}
-                  </Typography>
-                }
-                labelPlacement="end"
-              />
-            </Box>
+        {/* Tab Navigation */}
+        <Box sx={{ display: 'flex', backgroundColor: theme.palette.grey[100] }}>
+          <Button
+            fullWidth
+            onClick={() => switchTab('user')}
+            sx={{
+              py: 2,
+              borderRadius: 0,
+              backgroundColor: activeTab === 'user' ? 'white' : 'transparent',
+              color: activeTab === 'user' ? theme.palette.primary.main : theme.palette.text.secondary,
+              fontWeight: activeTab === 'user' ? 600 : 400,
+              boxShadow: activeTab === 'user' ? '0 -2px 4px rgba(0,0,0,0.1)' : 'none',
+              '&:hover': {
+                backgroundColor: activeTab === 'user' ? 'white' : theme.palette.grey[200]
+              }
+            }}
+          >
+            User Sign In
+          </Button>
+          <Button
+            fullWidth
+            onClick={() => switchTab('admin')}
+            sx={{
+              py: 2,
+              borderRadius: 0,
+              backgroundColor: activeTab === 'admin' ? 'white' : 'transparent',
+              color: activeTab === 'admin' ? theme.palette.primary.main : theme.palette.text.secondary,
+              fontWeight: activeTab === 'admin' ? 600 : 400,
+              boxShadow: activeTab === 'admin' ? '0 -2px 4px rgba(0,0,0,0.1)' : 'none',
+              '&:hover': {
+                backgroundColor: activeTab === 'admin' ? 'white' : theme.palette.grey[200]
+              }
+            }}
+          >
+            Admin Sign In
+          </Button>
+        </Box>
 
+        <CardContent sx={{ p: 4 }}>
+          {error && (
+            <Paper 
+              sx={{ 
+                p: 2, 
+                mb: 3, 
+                backgroundColor: theme.palette.error.light,
+                color: theme.palette.error.contrastText,
+                borderRadius: 1
+              }}
+            >
+              <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                {error}
+              </Typography>
+            </Paper>
+          )}
+
+          <form onSubmit={handleSubmit}>
             <TextField
               fullWidth
               required
               margin="normal"
               name="email"
               type="email"
-              label="Email Address"
+              label="Email"
               value={formData.email}
               onChange={handleChange}
               autoComplete="email"
@@ -193,6 +259,22 @@ const Login = () => {
               sx={{ mb: 3 }}
             />
 
+            {activeTab === 'user' && (
+              <Box sx={{ mb: 2 }}>
+                <Typography variant="body2" color="textSecondary">
+                  Staff Login? 
+                  <Link 
+                    component="button" 
+                    type="button" 
+                    onClick={() => switchTab('admin')}
+                    sx={{ ml: 1, textDecoration: 'none' }}
+                  >
+                    Log In
+                  </Link>
+                </Typography>
+              </Box>
+            )}
+
             <Button
               fullWidth
               type="submit"
@@ -211,6 +293,22 @@ const Login = () => {
               {loading ? 'Signing in...' : 'Sign In'}
             </Button>
           </form>
+
+          {activeTab === 'admin' && (
+            <Box sx={{ textAlign: 'center', mt: 2 }}>
+              <Typography variant="body2" color="textSecondary">
+                User Sign In? 
+                <Link 
+                  component="button" 
+                  type="button" 
+                  onClick={() => switchTab('user')}
+                  sx={{ ml: 1, textDecoration: 'none' }}
+                >
+                  Log In
+                </Link>
+              </Typography>
+            </Box>
+          )}
         </CardContent>
       </Card>
     </Box>
