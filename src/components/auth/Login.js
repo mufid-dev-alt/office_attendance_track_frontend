@@ -119,17 +119,18 @@ const Login = () => {
         variant="h1"
         sx={{
           position: 'absolute',
-          top: '15%',
+          top: '50%',
           left: '50%',
-          transform: 'translateX(-50%)',
-          color: 'rgba(255, 255, 255, 0.08)',
-          fontWeight: 900,
-          fontSize: { xs: '1.5rem', sm: '2rem', md: '2.5rem', lg: '3rem' },
+          transform: 'translate(-50%, -50%)',
+          color: 'rgba(255, 255, 255, 0.03)',
+          fontWeight: 800,
+          fontSize: { xs: '1.2rem', sm: '1.5rem', md: '2rem', lg: '2.5rem' },
           textAlign: 'center',
           whiteSpace: 'nowrap',
           userSelect: 'none',
           zIndex: 0,
-          letterSpacing: '0.1em'
+          letterSpacing: '0.15em',
+          lineHeight: 1.2
         }}
       >
         OFFICE ATTENDANCE MANAGEMENT SYSTEM
