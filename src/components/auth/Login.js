@@ -259,21 +259,7 @@ const Login = () => {
               sx={{ mb: 3 }}
             />
 
-            {activeTab === 'user' && (
-              <Box sx={{ mb: 2 }}>
-                <Typography variant="body2" color="textSecondary">
-                  Staff Login? 
-                  <Link 
-                    component="button" 
-                    type="button" 
-                    onClick={() => switchTab('admin')}
-                    sx={{ ml: 1, textDecoration: 'none' }}
-                  >
-                    Log In
-                  </Link>
-                </Typography>
-              </Box>
-            )}
+
 
             <Button
               fullWidth
@@ -294,21 +280,7 @@ const Login = () => {
             </Button>
           </form>
 
-          {activeTab === 'admin' && (
-            <Box sx={{ textAlign: 'center', mt: 2 }}>
-              <Typography variant="body2" color="textSecondary">
-                User Sign In? 
-                <Link 
-                  component="button" 
-                  type="button" 
-                  onClick={() => switchTab('user')}
-                  sx={{ ml: 1, textDecoration: 'none' }}
-                >
-                  Log In
-                </Link>
-              </Typography>
-            </Box>
-          )}
+
         </CardContent>
       </Card>
     </Box>
