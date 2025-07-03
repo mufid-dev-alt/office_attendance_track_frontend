@@ -429,7 +429,7 @@ const AttendanceRecords = () => {
                 ) : (
                   <Box>
                     {/* Calendar Header */}
-                    <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 1, mb: 2 }}>
+                    <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: { xs: 0.3, sm: 0.5 }, mb: 1 }}>
                       {weekDays.map((day) => (
                         <Typography
                           key={day}
@@ -437,9 +437,10 @@ const AttendanceRecords = () => {
                           sx={{
                             textAlign: 'center',
                             fontWeight: 600,
-                            p: 1,
+                            p: { xs: 0.5, sm: 0.8 },
                             bgcolor: theme.palette.grey[100],
-                            borderRadius: 1
+                            borderRadius: 1,
+                            fontSize: { xs: '0.7rem', sm: '0.8rem', md: '0.875rem' }
                           }}
                         >
                           {day}
@@ -451,7 +452,7 @@ const AttendanceRecords = () => {
                     <Box sx={{ 
                       display: 'grid', 
                       gridTemplateColumns: 'repeat(7, 1fr)', 
-                      gap: { xs: 0.5, sm: 1 },
+                      gap: { xs: 0.3, sm: 0.5 },
                       maxWidth: '100%'
                     }}>
                       {calendarData.map((dayData, index) => (
@@ -462,8 +463,8 @@ const AttendanceRecords = () => {
                             <Card
                               sx={{
                                 height: '100%',
-                                minHeight: { xs: 50, sm: 60, md: 70 },
-                                maxHeight: { xs: 60, sm: 70, md: 80 },
+                                minHeight: { xs: 40, sm: 45, md: 50 },
+                                maxHeight: { xs: 45, sm: 50, md: 55 },
                                 cursor: dayData.isWeekend ? 'default' : 'pointer',
                                 bgcolor: dayData.isWeekend
                                   ? theme.palette.grey[100]
@@ -492,17 +493,17 @@ const AttendanceRecords = () => {
                               }}
                             >
                               <CardContent sx={{ 
-                                p: { xs: 0.5, sm: 1 }, 
+                                p: { xs: 0.3, sm: 0.5 }, 
                                 textAlign: 'center', 
                                 height: '100%', 
                                 display: 'flex', 
                                 flexDirection: 'column', 
                                 justifyContent: 'space-between',
-                                '&:last-child': { pb: { xs: 0.5, sm: 1 } }
+                                '&:last-child': { pb: { xs: 0.3, sm: 0.5 } }
                               }}>
                                 <Typography variant="body2" sx={{ 
                                   fontWeight: 600, 
-                                  fontSize: { xs: '0.7rem', sm: '0.8rem', md: '0.875rem' },
+                                  fontSize: { xs: '0.65rem', sm: '0.7rem', md: '0.75rem' },
                                   lineHeight: 1
                                 }}>
                                   {dayData.day}
@@ -510,7 +511,7 @@ const AttendanceRecords = () => {
                                 
                                 {dayData.isWeekend ? (
                                   <Typography variant="caption" color="textSecondary" sx={{ 
-                                    fontSize: { xs: '0.55rem', sm: '0.65rem', md: '0.75rem' },
+                                    fontSize: { xs: '0.5rem', sm: '0.55rem', md: '0.6rem' },
                                     lineHeight: 1
                                   }}>
                                     OFF
@@ -518,17 +519,17 @@ const AttendanceRecords = () => {
                                 ) : dayData.status ? (
                                   <Box sx={{ display: 'flex', justifyContent: 'center' }}>
                                     {dayData.status === 'present' ? (
-                                      <PresentIcon sx={{ fontSize: { xs: 12, sm: 14, md: 16 }, color: theme.palette.success.main }} />
+                                      <PresentIcon sx={{ fontSize: { xs: 10, sm: 12, md: 14 }, color: theme.palette.success.main }} />
                                     ) : (
-                                      <AbsentIcon sx={{ fontSize: { xs: 12, sm: 14, md: 16 }, color: theme.palette.error.main }} />
+                                      <AbsentIcon sx={{ fontSize: { xs: 10, sm: 12, md: 14 }, color: theme.palette.error.main }} />
                                     )}
                                   </Box>
                                 ) : (
                                   <Typography variant="caption" color="textSecondary" sx={{ 
-                                    fontSize: { xs: '0.5rem', sm: '0.6rem', md: '0.7rem' },
+                                    fontSize: { xs: '0.45rem', sm: '0.5rem', md: '0.55rem' },
                                     lineHeight: 1
                                   }}>
-                                    Click to mark
+                                    Click
                                   </Typography>
                                 )}
                               </CardContent>
