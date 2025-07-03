@@ -427,7 +427,7 @@ const AttendanceRecords = () => {
                     <CircularProgress />
                   </Box>
                 ) : (
-                  <Box>
+                  <Box sx={{ maxWidth: { xs: '100%', sm: '500px', md: '600px' }, mx: 'auto' }}>
                     {/* Calendar Header */}
                     <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: { xs: 0.3, sm: 0.5 }, mb: 1 }}>
                       {weekDays.map((day) => (
@@ -456,7 +456,7 @@ const AttendanceRecords = () => {
                       maxWidth: '100%'
                     }}>
                       {calendarData.map((dayData, index) => (
-                        <Box key={index} sx={{ aspectRatio: '1/1' }}>
+                        <Box key={index} sx={{ aspectRatio: '1/1', maxWidth: '100px' }}>
                           {dayData.isEmpty ? (
                             <Box sx={{ height: '100%' }} />
                           ) : (
@@ -464,7 +464,7 @@ const AttendanceRecords = () => {
                               sx={{
                                 height: '100%',
                                 minHeight: { xs: 40, sm: 45, md: 50 },
-                                maxHeight: { xs: 45, sm: 50, md: 55 },
+                                maxHeight: { xs: 45, sm: 50, md: 60 },
                                 cursor: dayData.isWeekend ? 'default' : 'pointer',
                                 bgcolor: dayData.isWeekend
                                   ? theme.palette.grey[100]
