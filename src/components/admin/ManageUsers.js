@@ -157,12 +157,22 @@ const ManageUsers = () => {
       return;
     }
 
+    // Validate User ID is a number
+    const userId = parseInt(formData.id);
+    if (isNaN(userId) || userId <= 0) {
+      showNotification('User ID must be a positive number', 'error');
+      return;
+    }
+
     try {
       const response = await fetch(API_ENDPOINTS.users.create, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          ...formData,
+          id: userId,
+          email: formData.email,
+          password: formData.password,
+          full_name: formData.full_name,
           role: 'user'
         })
       });
@@ -170,6 +180,12 @@ const ManageUsers = () => {
       if (response.ok) {
         showNotification('User added successfully', 'success');
         setDialogOpen(false);
+        setFormData({
+          id: '',
+          full_name: '',
+          email: '',
+          password: ''
+        });
         fetchUsers();
       } else {
         const error = await response.json();
@@ -339,13 +355,20 @@ const ManageUsers = () => {
         <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="sm" fullWidth>
           <DialogTitle>Add New User</DialogTitle>
           <DialogContent>
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}>
+            <Box 
+              component="form" 
+              onSubmit={(e) => { e.preventDefault(); handleSubmit(); }}
+              sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}
+            >
               <TextField
                 fullWidth
                 label="User ID *"
+                type="number"
                 value={formData.id}
                 onChange={(e) => setFormData({ ...formData, id: e.target.value })}
-                helperText="Unique identifier for the user"
+                helperText="Unique identifier for the user (must be a positive number)"
+                required
+                inputProps={{ min: 1 }}
               />
               
               <TextField
@@ -353,6 +376,7 @@ const ManageUsers = () => {
                 label="Full Name *"
                 value={formData.full_name}
                 onChange={(e) => setFormData({ ...formData, full_name: e.target.value })}
+                required
               />
               
               <TextField
@@ -361,6 +385,7 @@ const ManageUsers = () => {
                 type="email"
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                required
               />
               
               <TextField
@@ -370,12 +395,14 @@ const ManageUsers = () => {
                 value={formData.password}
                 onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                 helperText="User will use this password to login"
+                required
+                autoComplete="new-password"
               />
             </Box>
           </DialogContent>
           <DialogActions>
             <Button onClick={() => setDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleSubmit} variant="contained">
+            <Button onClick={handleSubmit} variant="contained" type="submit">
               Add User
             </Button>
           </DialogActions>
