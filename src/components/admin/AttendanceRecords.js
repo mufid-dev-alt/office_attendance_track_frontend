@@ -288,44 +288,52 @@ const AttendanceRecords = () => {
                 <Typography variant="h6" sx={{ mb: 3, fontWeight: 600, textAlign: 'left' }}>
                   Users
                 </Typography>
-                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(3, 1fr)' }, gap: 2 }}>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                   {filteredUsers.map((user) => (
-                    <Card 
+                    <Box
                       key={user.id}
                       sx={{ 
+                        display: 'flex',
+                        alignItems: 'center',
+                        p: 2,
+                        borderRadius: 2,
+                        border: '1px solid',
+                        borderColor: theme.palette.divider,
                         cursor: 'pointer',
-                        transition: 'all 0.3s ease',
-                        border: '2px solid transparent',
+                        transition: 'all 0.2s ease',
+                        bgcolor: theme.palette.background.paper,
                         '&:hover': {
-                          transform: 'translateY(-4px)',
-                          boxShadow: theme.shadows[8],
-                          borderColor: theme.palette.primary.main
+                          borderColor: theme.palette.primary.main,
+                          bgcolor: theme.palette.primary.light + '08',
+                          transform: 'translateX(4px)'
                         }
                       }}
                       onClick={() => setSelectedUser(user)}
                     >
-                      <CardContent sx={{ p: 3, textAlign: 'center' }}>
-                        <Avatar 
-                          sx={{ 
-                            mx: 'auto', 
-                            mb: 2, 
-                            bgcolor: theme.palette.primary.main, 
-                            width: 56, 
-                            height: 56,
-                            fontSize: '1.5rem',
-                            fontWeight: 600
-                          }}
-                        >
-                          {user.full_name.charAt(0)}
-                        </Avatar>
-                        <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
+                      <Avatar 
+                        sx={{ 
+                          mr: 2, 
+                          bgcolor: theme.palette.primary.main, 
+                          width: 40, 
+                          height: 40,
+                          fontSize: '1rem',
+                          fontWeight: 600
+                        }}
+                      >
+                        {user.full_name.charAt(0)}
+                      </Avatar>
+                      <Box sx={{ flex: 1 }}>
+                        <Typography variant="body1" sx={{ fontWeight: 600, mb: 0.5 }}>
                           {user.full_name}
                         </Typography>
-                        <Typography variant="body2" color="textSecondary">
+                        <Typography variant="body2" color="textSecondary" sx={{ 
+                          fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                          wordBreak: 'break-word'
+                        }}>
                           {user.email}
                         </Typography>
-                      </CardContent>
-                    </Card>
+                      </Box>
+                    </Box>
                   ))}
                 </Box>
                 
@@ -443,8 +451,8 @@ const AttendanceRecords = () => {
                     <Box sx={{ 
                       display: 'grid', 
                       gridTemplateColumns: 'repeat(7, 1fr)', 
-                      gap: 1,
-                      aspectRatio: { xs: 'auto', md: '7/6' }
+                      gap: { xs: 0.5, sm: 1 },
+                      maxWidth: '100%'
                     }}>
                       {calendarData.map((dayData, index) => (
                         <Box key={index} sx={{ aspectRatio: '1/1' }}>
@@ -454,7 +462,8 @@ const AttendanceRecords = () => {
                             <Card
                               sx={{
                                 height: '100%',
-                                minHeight: { xs: 60, sm: 80, md: 100 },
+                                minHeight: { xs: 50, sm: 60, md: 70 },
+                                maxHeight: { xs: 60, sm: 70, md: 80 },
                                 cursor: dayData.isWeekend ? 'default' : 'pointer',
                                 bgcolor: dayData.isWeekend
                                   ? theme.palette.grey[100]
@@ -483,32 +492,42 @@ const AttendanceRecords = () => {
                               }}
                             >
                               <CardContent sx={{ 
-                                p: 1, 
+                                p: { xs: 0.5, sm: 1 }, 
                                 textAlign: 'center', 
                                 height: '100%', 
                                 display: 'flex', 
                                 flexDirection: 'column', 
                                 justifyContent: 'space-between',
-                                '&:last-child': { pb: 1 }
+                                '&:last-child': { pb: { xs: 0.5, sm: 1 } }
                               }}>
-                                <Typography variant="body2" sx={{ fontWeight: 600, fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
+                                <Typography variant="body2" sx={{ 
+                                  fontWeight: 600, 
+                                  fontSize: { xs: '0.7rem', sm: '0.8rem', md: '0.875rem' },
+                                  lineHeight: 1
+                                }}>
                                   {dayData.day}
                                 </Typography>
                                 
                                 {dayData.isWeekend ? (
-                                  <Typography variant="caption" color="textSecondary" sx={{ fontSize: { xs: '0.6rem', sm: '0.75rem' } }}>
+                                  <Typography variant="caption" color="textSecondary" sx={{ 
+                                    fontSize: { xs: '0.55rem', sm: '0.65rem', md: '0.75rem' },
+                                    lineHeight: 1
+                                  }}>
                                     OFF
                                   </Typography>
                                 ) : dayData.status ? (
                                   <Box sx={{ display: 'flex', justifyContent: 'center' }}>
                                     {dayData.status === 'present' ? (
-                                      <PresentIcon sx={{ fontSize: { xs: 14, sm: 16 }, color: theme.palette.success.main }} />
+                                      <PresentIcon sx={{ fontSize: { xs: 12, sm: 14, md: 16 }, color: theme.palette.success.main }} />
                                     ) : (
-                                      <AbsentIcon sx={{ fontSize: { xs: 14, sm: 16 }, color: theme.palette.error.main }} />
+                                      <AbsentIcon sx={{ fontSize: { xs: 12, sm: 14, md: 16 }, color: theme.palette.error.main }} />
                                     )}
                                   </Box>
                                 ) : (
-                                  <Typography variant="caption" color="textSecondary" sx={{ fontSize: { xs: '0.6rem', sm: '0.75rem' } }}>
+                                  <Typography variant="caption" color="textSecondary" sx={{ 
+                                    fontSize: { xs: '0.5rem', sm: '0.6rem', md: '0.7rem' },
+                                    lineHeight: 1
+                                  }}>
                                     Click to mark
                                   </Typography>
                                 )}

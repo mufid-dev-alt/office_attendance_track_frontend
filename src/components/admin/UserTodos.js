@@ -250,44 +250,52 @@ const UserTodos = () => {
                 <Typography variant="h6" sx={{ mb: 3, fontWeight: 600, textAlign: 'left' }}>
                   Users
                 </Typography>
-                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(3, 1fr)' }, gap: 2 }}>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                   {filteredUsers.map((user) => (
-                    <Card 
+                    <Box
                       key={user.id}
                       sx={{ 
+                        display: 'flex',
+                        alignItems: 'center',
+                        p: 2,
+                        borderRadius: 2,
+                        border: '1px solid',
+                        borderColor: theme.palette.divider,
                         cursor: 'pointer',
-                        transition: 'all 0.3s ease',
-                        border: '2px solid transparent',
+                        transition: 'all 0.2s ease',
+                        bgcolor: theme.palette.background.paper,
                         '&:hover': {
-                          transform: 'translateY(-4px)',
-                          boxShadow: theme.shadows[8],
-                          borderColor: theme.palette.primary.main
+                          borderColor: theme.palette.primary.main,
+                          bgcolor: theme.palette.primary.light + '08',
+                          transform: 'translateX(4px)'
                         }
                       }}
                       onClick={() => setSelectedUser(user)}
                     >
-                      <CardContent sx={{ p: 3, textAlign: 'center' }}>
-                        <Avatar 
-                          sx={{ 
-                            mx: 'auto', 
-                            mb: 2, 
-                            bgcolor: theme.palette.primary.main, 
-                            width: 56, 
-                            height: 56,
-                            fontSize: '1.5rem',
-                            fontWeight: 600
-                          }}
-                        >
-                          {user.full_name.charAt(0)}
-                        </Avatar>
-                        <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
+                      <Avatar 
+                        sx={{ 
+                          mr: 2, 
+                          bgcolor: theme.palette.primary.main, 
+                          width: 40, 
+                          height: 40,
+                          fontSize: '1rem',
+                          fontWeight: 600
+                        }}
+                      >
+                        {user.full_name.charAt(0)}
+                      </Avatar>
+                      <Box sx={{ flex: 1 }}>
+                        <Typography variant="body1" sx={{ fontWeight: 600, mb: 0.5 }}>
                           {user.full_name}
                         </Typography>
-                        <Typography variant="body2" color="textSecondary">
+                        <Typography variant="body2" color="textSecondary" sx={{ 
+                          fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                          wordBreak: 'break-word'
+                        }}>
                           {user.email}
                         </Typography>
-                      </CardContent>
-                    </Card>
+                      </Box>
+                    </Box>
                   ))}
                 </Box>
                 

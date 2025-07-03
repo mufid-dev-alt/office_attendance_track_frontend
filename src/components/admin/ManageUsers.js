@@ -174,34 +174,46 @@ const ManageUsers = () => {
                 <CircularProgress />
               </Box>
             ) : (
-              <TableContainer>
-                <Table>
+              <TableContainer sx={{ overflowX: 'auto' }}>
+                <Table sx={{ minWidth: { xs: 'auto', sm: 650 } }}>
                   <TableHead>
                     <TableRow>
-                      <TableCell>User ID</TableCell>
+                      <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' } }}>User ID</TableCell>
                       <TableCell>Full Name</TableCell>
-                      <TableCell>Email</TableCell>
-                      <TableCell>Registration Date</TableCell>
+                      <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>Email</TableCell>
+                      <TableCell sx={{ display: { xs: 'none', lg: 'table-cell' } }}>Registration Date</TableCell>
                       <TableCell align="center">Actions</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
                     {users.map((user) => (
                       <TableRow key={user.id}>
-                        <TableCell>
+                        <TableCell sx={{ display: { xs: 'none', sm: 'table-cell' } }}>
                           <Typography variant="body2" sx={{ fontWeight: 600 }}>
                             {user.id}
                           </Typography>
                         </TableCell>
-                        <TableCell>{user.full_name}</TableCell>
-                        <TableCell>{user.email}</TableCell>
                         <TableCell>
+                          <Box>
+                            <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                              {user.full_name}
+                            </Typography>
+                            <Typography variant="caption" color="textSecondary" sx={{ display: { xs: 'block', md: 'none' } }}>
+                              {user.email}
+                            </Typography>
+                          </Box>
+                        </TableCell>
+                        <TableCell sx={{ display: { xs: 'none', md: 'table-cell' } }}>
+                          {user.email}
+                        </TableCell>
+                        <TableCell sx={{ display: { xs: 'none', lg: 'table-cell' } }}>
                           {user.created_at ? new Date(user.created_at).toLocaleDateString() : 'N/A'}
                         </TableCell>
                         <TableCell align="center">
                           <IconButton 
                             onClick={() => handleDelete(user.id, user.full_name)} 
                             color="error"
+                            size="small"
                           >
                             <DeleteIcon />
                           </IconButton>
