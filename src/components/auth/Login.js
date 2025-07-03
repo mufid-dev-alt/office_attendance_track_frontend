@@ -114,27 +114,7 @@ const Login = () => {
         overflow: 'hidden'
       }}
     >
-      {/* Background Title */}
-      <Typography
-        variant="h1"
-        sx={{
-          position: 'absolute',
-          top: '50%',
-          left: '50%',
-          transform: 'translate(-50%, -50%)',
-          color: 'rgba(255, 255, 255, 0.03)',
-          fontWeight: 800,
-          fontSize: { xs: '1.2rem', sm: '1.5rem', md: '2rem', lg: '2.5rem' },
-          textAlign: 'center',
-          whiteSpace: 'nowrap',
-          userSelect: 'none',
-          zIndex: 0,
-          letterSpacing: '0.15em',
-          lineHeight: 1.2
-        }}
-      >
-        OFFICE ATTENDANCE MANAGEMENT SYSTEM
-      </Typography>
+
 
       <Card 
         sx={{ 
@@ -156,6 +136,18 @@ const Login = () => {
             py: 4
           }}
         >
+          <Typography 
+            variant="h6" 
+            sx={{ 
+              fontWeight: 600, 
+              mb: 2, 
+              opacity: 0.9,
+              fontSize: { xs: '0.8rem', sm: '0.9rem', md: '1rem' },
+              letterSpacing: '0.1em'
+            }}
+          >
+            OFFICE ATTENDANCE MANAGEMENT SYSTEM
+          </Typography>
           <Typography variant="h3" component="h1" sx={{ fontWeight: 700, mb: 1 }}>
             DCM Infotech
           </Typography>
