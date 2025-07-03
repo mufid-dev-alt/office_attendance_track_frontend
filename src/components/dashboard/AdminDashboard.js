@@ -104,12 +104,20 @@ const AdminHeader = ({ onMenuClick }) => {
               onClick={handleLogout}
               startIcon={<LogoutIcon />}
               sx={{ 
+                fontFamily: "'Poppins', sans-serif",
                 color: 'white',
-                border: '1px solid rgba(255,255,255,0.3)',
-                borderRadius: 0,
+                borderRadius: '24px',
+                px: 3,
+                py: 1,
+                background: 'rgba(255,255,255,0.1)',
+                backdropFilter: 'blur(10px)',
+                border: '1px solid rgba(255,255,255,0.2)',
+                transition: 'all 0.3s ease',
                 '&:hover': {
-                  backgroundColor: 'rgba(255,255,255,0.1)',
-                  border: '1px solid rgba(255,255,255,0.5)'
+                  backgroundColor: 'rgba(255,255,255,0.2)',
+                  border: '1px solid rgba(255,255,255,0.3)',
+                  transform: 'translateY(-2px)',
+                  boxShadow: '0 4px 20px rgba(0,0,0,0.1)'
                 }
               }}
             >
@@ -359,15 +367,17 @@ const AdminDashboard = () => {
           return;
         }
         
-        const csvContent = convertToCSV(data);
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        // Get user details for proper Excel format
+        const userDetails = users.find(u => u.id === userId);
+        const excelContent = convertToExcelFormat(data, userDetails);
+        const blob = new Blob([excelContent], { type: 'text/csv;charset=utf-8;' });
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
         
         // Generate filename based on filter
         const timeRange = selectedMonth === 0 || selectedYear === 0 ? 'AllTime' : `${months[selectedMonth - 1]}_${selectedYear}`;
-        a.download = `${userName}_attendance_${timeRange}.csv`;
+        a.download = `${userName.replace(/\s+/g, '_')}_${timeRange}_Attendance.csv`;
         
         document.body.appendChild(a);
         a.click();
@@ -384,7 +394,30 @@ const AdminDashboard = () => {
     }
   };
 
+  const convertToExcelFormat = (data, userDetails) => {
+    // Create header rows matching the My Attendance format
+    let csv = `USERNAME - ${userDetails?.full_name || 'Unknown User'}\n`;
+    csv += `USER-EMAIL - ${userDetails?.email || 'Unknown Email'}\n`;
+    csv += `DATE,DAY,ATTENDANCE\n`;
+    
+    // Sort data by date
+    const sortedData = [...data].sort((a, b) => new Date(a.date) - new Date(b.date));
+    
+    // Add data rows
+    sortedData.forEach(record => {
+      const date = new Date(record.date);
+      const dayName = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][date.getDay()];
+      const formattedDate = `${date.getDate()}-${months[date.getMonth()].substr(0, 3)}-${date.getFullYear().toString().substr(-2)}`;
+      const status = record.status === 'present' ? 'PRESENT' : record.status === 'absent' ? 'ABSENT' : 'OFF';
+      
+      csv += `${formattedDate},${dayName},${status}\n`;
+    });
+    
+    return csv;
+  };
+
   const convertToCSV = (data) => {
+    // This function is kept for backward compatibility but not used
     if (!data || data.length === 0) {
       return 'No data available';
     }

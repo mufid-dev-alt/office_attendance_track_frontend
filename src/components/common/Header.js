@@ -1,5 +1,6 @@
 import React from 'react';
 import { AppBar, Toolbar, Typography, Button, Box } from '@mui/material';
+import { ExitToApp as LogoutIcon } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 
 const Header = () => {
@@ -49,16 +50,25 @@ const Header = () => {
               >
                 Welcome, {user.full_name}
               </Typography>
-              <Button 
-                color="inherit" 
+              <Button
+                color="inherit"
                 onClick={handleLogout}
-                sx={{
+                startIcon={<LogoutIcon />}
+                sx={{ 
+                  fontFamily: "'Poppins', sans-serif",
                   color: 'white',
-                  border: '1px solid rgba(255,255,255,0.3)',
-                  borderRadius: 0,
+                  borderRadius: '24px',
+                  px: 3,
+                  py: 1,
+                  background: 'rgba(255,255,255,0.1)',
+                  backdropFilter: 'blur(10px)',
+                  border: '1px solid rgba(255,255,255,0.2)',
+                  transition: 'all 0.3s ease',
                   '&:hover': {
-                    backgroundColor: 'rgba(255,255,255,0.1)',
-                    border: '1px solid rgba(255,255,255,0.5)'
+                    backgroundColor: 'rgba(255,255,255,0.2)',
+                    border: '1px solid rgba(255,255,255,0.3)',
+                    transform: 'translateY(-2px)',
+                    boxShadow: '0 4px 20px rgba(0,0,0,0.1)'
                   }
                 }}
               >

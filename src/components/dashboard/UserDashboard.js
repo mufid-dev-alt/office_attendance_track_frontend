@@ -359,12 +359,15 @@ const UserDashboard = () => {
           return;
         }
         
-        const csvContent = convertToCSV(data);
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        // Convert to Excel-like CSV format
+        const excelContent = convertToExcelFormat(data, userData);
+        const blob = new Blob([excelContent], { type: 'text/csv;charset=utf-8;' });
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `${userData.full_name}_attendance_${months[selectedMonth - 1]}_${selectedYear}.csv`;
+        
+        const monthName = months[selectedMonth - 1];
+        a.download = `${userData.full_name.replace(/\s+/g, '_')}_${monthName}_${selectedYear}_Attendance.csv`;
         
         document.body.appendChild(a);
         a.click();
@@ -381,7 +384,30 @@ const UserDashboard = () => {
     }
   };
 
+  const convertToExcelFormat = (data, userData) => {
+    // Create header rows matching the My Attendance format
+    let csv = `USERNAME - ${userData.full_name}\n`;
+    csv += `USER-EMAIL - ${userData.email}\n`;
+    csv += `DATE,DAY,ATTENDANCE\n`;
+    
+    // Sort data by date
+    const sortedData = [...data].sort((a, b) => new Date(a.date) - new Date(b.date));
+    
+    // Add data rows
+    sortedData.forEach(record => {
+      const date = new Date(record.date);
+      const dayName = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][date.getDay()];
+      const formattedDate = `${date.getDate()}-${months[date.getMonth()].substr(0, 3)}-${date.getFullYear().toString().substr(-2)}`;
+      const status = record.status === 'present' ? 'PRESENT' : record.status === 'absent' ? 'ABSENT' : 'OFF';
+      
+      csv += `${formattedDate},${dayName},${status}\n`;
+    });
+    
+    return csv;
+  };
+
   const convertToCSV = (data) => {
+    // This function is kept for backward compatibility but not used
     if (!data || data.length === 0) {
       return 'No data available';
     }
