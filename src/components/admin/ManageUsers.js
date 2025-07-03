@@ -20,11 +20,16 @@ import {
   Snackbar,
   Alert,
   CircularProgress,
-  useTheme
+  useTheme,
+  Chip,
+  Stack,
+  Divider
 } from '@mui/material';
 import {
   Delete as DeleteIcon,
-  Add as AddIcon
+  Add as AddIcon,
+  Undo as UndoIcon,
+  Warning as WarningIcon
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import Header from '../common/Header';
@@ -36,6 +41,9 @@ const ManageUsers = () => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [userToDelete, setUserToDelete] = useState(null);
+  const [recentlyDeleted, setRecentlyDeleted] = useState([]);
   const [formData, setFormData] = useState({
     id: '',
     full_name: '',
@@ -82,23 +90,64 @@ const ManageUsers = () => {
     setDialogOpen(true);
   };
 
-  const handleDelete = async (userId, userName) => {
-    if (!window.confirm(`Are you sure you want to remove ${userName}? This action cannot be undone.`)) return;
+  const handleDeleteClick = (user) => {
+    setUserToDelete(user);
+    setDeleteDialogOpen(true);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!userToDelete) return;
     
     try {
-      const response = await fetch(API_ENDPOINTS.users.delete(userId), {
+      const response = await fetch(API_ENDPOINTS.users.delete(userToDelete.id), {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' }
       });
 
       if (response.ok) {
-        showNotification('User removed successfully', 'success');
+        const result = await response.json();
+        
+        // Add to recently deleted list
+        setRecentlyDeleted(prev => [...prev, {
+          ...userToDelete,
+          deletedAt: new Date().toISOString(),
+          message: result.message
+        }]);
+
+        showNotification(`${userToDelete.full_name} and all their data has been permanently deleted`, 'success');
+        setDeleteDialogOpen(false);
+        setUserToDelete(null);
         fetchUsers();
       } else {
-        throw new Error('Failed to remove user');
+        const error = await response.json();
+        throw new Error(error.detail || 'Failed to delete user');
       }
     } catch (error) {
-      showNotification('Error removing user', 'error');
+      showNotification(error.message || 'Error deleting user', 'error');
+    }
+  };
+
+  const handleUndo = async (userId) => {
+    try {
+      const response = await fetch(API_ENDPOINTS.users.undo(userId), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        
+        // Remove from recently deleted list
+        setRecentlyDeleted(prev => prev.filter(user => user.id !== userId));
+        
+        showNotification(`${result.restored_user.full_name} and all their data has been restored`, 'success');
+        fetchUsers();
+      } else {
+        const error = await response.json();
+        throw new Error(error.detail || 'Failed to restore user');
+      }
+    } catch (error) {
+      showNotification(error.message || 'Error restoring user', 'error');
     }
   };
 
@@ -124,7 +173,7 @@ const ManageUsers = () => {
         fetchUsers();
       } else {
         const error = await response.json();
-        throw new Error(error.message || 'Failed to add user');
+        throw new Error(error.detail || 'Failed to add user');
       }
     } catch (error) {
       showNotification(error.message || 'Error adding user', 'error');
@@ -163,6 +212,31 @@ const ManageUsers = () => {
               Add New User
             </Button>
           </Box>
+
+          {/* Recently Deleted Users */}
+          {recentlyDeleted.length > 0 && (
+            <Paper sx={{ p: 3, mb: 3, backgroundColor: '#fff3e0', border: '1px solid #ffb74d' }}>
+              <Typography variant="h6" sx={{ mb: 2, fontWeight: 600, color: '#f57c00' }}>
+                Recently Deleted Users
+              </Typography>
+              <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
+                These users have been permanently deleted. Click "Undo" to restore them and all their data.
+              </Typography>
+              <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                {recentlyDeleted.map((user) => (
+                  <Chip
+                    key={user.id}
+                    label={`${user.full_name} (ID: ${user.id})`}
+                    color="warning"
+                    variant="outlined"
+                    deleteIcon={<UndoIcon />}
+                    onDelete={() => handleUndo(user.id)}
+                    sx={{ mb: 1 }}
+                  />
+                ))}
+              </Stack>
+            </Paper>
+          )}
 
           <Paper sx={{ p: 3 }}>
             <Typography variant="h6" sx={{ mb: 3, fontWeight: 600 }}>
@@ -211,7 +285,7 @@ const ManageUsers = () => {
                         </TableCell>
                         <TableCell align="center">
                           <IconButton 
-                            onClick={() => handleDelete(user.id, user.full_name)} 
+                            onClick={() => handleDeleteClick(user)} 
                             color="error"
                             size="small"
                           >
@@ -226,6 +300,40 @@ const ManageUsers = () => {
             )}
           </Paper>
         </Container>
+
+        {/* Delete Confirmation Dialog */}
+        <Dialog open={deleteDialogOpen} onClose={() => setDeleteDialogOpen(false)} maxWidth="sm" fullWidth>
+          <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <WarningIcon color="error" />
+            Confirm User Deletion
+          </DialogTitle>
+          <DialogContent>
+            <Typography variant="body1" sx={{ mb: 2 }}>
+              Are you sure you want to permanently delete <strong>{userToDelete?.full_name}</strong>?
+            </Typography>
+            <Box sx={{ backgroundColor: '#ffebee', p: 2, borderRadius: 1, mb: 2 }}>
+              <Typography variant="body2" color="error" sx={{ fontWeight: 600, mb: 1 }}>
+                This action will:
+              </Typography>
+              <Typography variant="body2" color="error" component="ul" sx={{ ml: 2 }}>
+                <li>Remove the user from the system permanently</li>
+                <li>Delete all their attendance records</li>
+                <li>Delete all their todo items</li>
+                <li>Prevent them from logging in</li>
+                <li>Remove them from all admin dashboards</li>
+              </Typography>
+            </Box>
+            <Typography variant="body2" color="textSecondary">
+              Don't worry - you can undo this action if it was done by mistake.
+            </Typography>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleDeleteConfirm} variant="contained" color="error">
+              Delete User
+            </Button>
+          </DialogActions>
+        </Dialog>
 
         {/* Add User Dialog */}
         <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)} maxWidth="sm" fullWidth>

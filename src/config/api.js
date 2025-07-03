@@ -31,7 +31,8 @@ export const API_ENDPOINTS = {
         get: (id) => `${API_BASE_URL}/api/users/${id}`,
         create: `${API_BASE_URL}/api/users`,
         update: (userId) => `${API_BASE_URL}/api/users/${userId}`,
-        delete: (userId) => `${API_BASE_URL}/api/users/${userId}`
+        delete: (userId) => `${API_BASE_URL}/api/users/${userId}`,
+        undo: (userId) => `${API_BASE_URL}/api/users/${userId}/undo`
     },
     todos: {
         create: `${API_BASE_URL}/api/todos`,
