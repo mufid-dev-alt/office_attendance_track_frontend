@@ -18,11 +18,13 @@ import {
   useTheme,
   Snackbar,
   Alert,
-  CircularProgress
+  CircularProgress,
+  Divider
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
+import DateRangeIcon from '@mui/icons-material/DateRange';
 import { useNavigate } from 'react-router-dom';
 import Header from '../common/Header';
 import { API_ENDPOINTS } from '../../config/api';
@@ -32,9 +34,13 @@ const TodoPage = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [todos, setTodos] = useState([]);
-  const [newTodo, setNewTodo] = useState('');
-  const [editingTodo, setEditingTodo] = useState(null);
-  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editDialog, setEditDialog] = useState({
+    open: false,
+    todo: null,
+    notes: '',
+    date: '',
+    isNew: false
+  });
   const [notification, setNotification] = useState({
     open: false,
     message: '',
@@ -80,10 +86,34 @@ const TodoPage = () => {
     }
   }, [showNotification, handleAuthError]);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!newTodo.trim()) {
+  const handleAddTodo = () => {
+    setEditDialog({
+      open: true,
+      todo: null,
+      notes: '',
+      date: new Date().toISOString().split('T')[0],
+      isNew: true
+    });
+  };
+
+  const handleEditTodo = (todo) => {
+    setEditDialog({
+      open: true,
+      todo: todo,
+      notes: todo.notes,
+      date: todo.date_created || new Date().toISOString().split('T')[0],
+      isNew: false
+    });
+  };
+
+  const handleSaveTodo = async () => {
+    if (!editDialog.notes.trim()) {
       showNotification('Please enter a todo', 'error');
+      return;
+    }
+
+    if (!editDialog.date) {
+      showNotification('Please select a date', 'error');
       return;
     }
 
@@ -91,63 +121,52 @@ const TodoPage = () => {
       setLoading(true);
       const userData = JSON.parse(localStorage.getItem('user'));
       
-      const response = await fetch(API_ENDPOINTS.todos.create, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        body: JSON.stringify({
-          user_id: userData.id,
-          notes: newTodo,
-          completed: 0
-        })
-      });
+      if (editDialog.isNew) {
+        // Create new todo
+        const response = await fetch(API_ENDPOINTS.todos.create, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
+          body: JSON.stringify({
+            user_id: userData.id,
+            notes: editDialog.notes,
+            date_created: editDialog.date
+          })
+        });
 
-      if (!response.ok) {
-        if (response.status === 401 || response.status === 403) {
-          handleAuthError();
-          return;
+        if (!response.ok) {
+          if (response.status === 401 || response.status === 403) {
+            handleAuthError();
+            return;
+          }
+          throw new Error('Failed to create todo');
         }
-        throw new Error('Failed to create todo');
+
+        showNotification('Todo created successfully', 'success');
+      } else {
+        // Update existing todo
+        const response = await fetch(`${API_ENDPOINTS.todos.update(editDialog.todo.id)}?notes=${encodeURIComponent(editDialog.notes)}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          }
+        });
+
+        if (!response.ok) {
+          if (response.status === 401 || response.status === 403) {
+            handleAuthError();
+            return;
+          }
+          throw new Error('Failed to update todo');
+        }
+
+        showNotification('Todo updated successfully', 'success');
       }
 
-      const data = await response.json();
-      showNotification('Todo created successfully', 'success');
-      setNewTodo('');
-      setDialogOpen(false);
-      fetchTodos();
-    } catch (error) {
-      showNotification(error.message, 'error');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleUpdate = async (todo) => {
-    try {
-      setLoading(true);
-      const response = await fetch(`${API_ENDPOINTS.todos.update(todo.id)}?completed=${todo.completed ? 0 : 1}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        }
-      });
-
-      if (!response.ok) {
-        if (response.status === 401 || response.status === 403) {
-          handleAuthError();
-          return;
-        }
-        throw new Error('Failed to update todo');
-      }
-
-      const data = await response.json();
-      showNotification('Todo updated successfully', 'success');
-      setEditingTodo(null);
-      setDialogOpen(false);
-      setNewTodo('');
+      setEditDialog({ open: false, todo: null, notes: '', date: '', isNew: false });
       fetchTodos();
     } catch (error) {
       showNotification(error.message, 'error');
@@ -175,7 +194,6 @@ const TodoPage = () => {
         throw new Error('Failed to delete todo');
       }
 
-      const data = await response.json();
       showNotification('Todo deleted successfully', 'success');
       fetchTodos();
     } catch (error) {
@@ -198,170 +216,158 @@ const TodoPage = () => {
     <>
       <Header />
       <Box component="main" sx={{ flexGrow: 1, p: 3, mt: 8, backgroundColor: theme.palette.grey[50], minHeight: '100vh' }}>
-      <Container maxWidth="lg">
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
-          <Typography 
-            variant="h4" 
-            sx={{ 
-              fontWeight: 600,
-                color: theme.palette.primary.main
-            }}
-          >
-            Todo List
-          </Typography>
-          <Button
-            variant="contained"
-            startIcon={<AddIcon />}
-            onClick={() => {
-              setEditingTodo(null);
-                setNewTodo('');
-              setDialogOpen(true);
-            }}
-          >
-              Add New Todo
-          </Button>
-        </Box>
-
-          {loading ? (
-            <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
-              <CircularProgress />
-            </Box>
-          ) : (
-            <Paper sx={{ p: 3 }}>
-              <Typography variant="h6" gutterBottom sx={{ fontWeight: 600, mb: 3 }}>
-                My Todos ({todos.length})
+        <Container maxWidth="lg">
+          <Paper sx={{ p: 4 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+              <Typography variant="h4" sx={{ fontWeight: 600 }}>
+                My Todos
               </Typography>
-              
-              {todos.length === 0 ? (
-                <Box sx={{ textAlign: 'center', py: 4 }}>
-                  <Typography variant="body1" color="textSecondary">
-                    No todos yet. Click "Add New Todo" to get started!
+              <Button
+                variant="contained"
+                startIcon={<AddIcon />}
+                onClick={handleAddTodo}
+                sx={{
+                  borderRadius: 3,
+                  px: 3,
+                  py: 1.5,
+                  textTransform: 'none',
+                  fontWeight: 600
+                }}
+              >
+                Add Todo
+              </Button>
+            </Box>
+
+            {loading ? (
+              <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+                <CircularProgress />
+              </Box>
+            ) : todos.length === 0 ? (
+              <Box sx={{ textAlign: 'center', py: 8 }}>
+                <Typography variant="h6" color="textSecondary" sx={{ mb: 2 }}>
+                  No todos yet
                 </Typography>
-                </Box>
-              ) : (
-                <List>
-                  {todos.map(todo => (
-                      <ListItem
-                        key={todo.id}
-                        sx={{
-                          mb: 1,
-                          borderRadius: 1,
-                          border: '1px solid',
-                          borderColor: theme.palette.divider,
-                          '&:hover': {
-                            backgroundColor: theme.palette.action.hover
-                          }
-                        }}
-                      >
-                        <ListItemText
-                          primary={
-                            <Typography
-                              sx={{
-                                fontWeight: 500,
-                              color: theme.palette.text.primary
-                              }}
-                            >
+                <Typography variant="body2" color="textSecondary" sx={{ mb: 3 }}>
+                  Start by adding your first todo item
+                </Typography>
+                <Button
+                  variant="contained"
+                  startIcon={<AddIcon />}
+                  onClick={handleAddTodo}
+                  sx={{
+                    borderRadius: 3,
+                    px: 3,
+                    py: 1.5,
+                    textTransform: 'none',
+                    fontWeight: 600
+                  }}
+                >
+                  Add First Todo
+                </Button>
+              </Box>
+            ) : (
+              <List>
+                {todos.map((todo, index) => (
+                  <React.Fragment key={todo.id}>
+                    <ListItem sx={{ py: 2 }}>
+                      <ListItemText
+                        primary={
+                          <Typography variant="body1" sx={{ fontWeight: 500, mb: 1 }}>
                             {todo.notes}
+                          </Typography>
+                        }
+                        secondary={
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <DateRangeIcon sx={{ fontSize: 16, color: theme.palette.text.secondary }} />
+                            <Typography variant="body2" color="textSecondary">
+                              Created: {todo.date_created ? new Date(todo.date_created).toLocaleDateString() : 'No date'}
                             </Typography>
-                          }
-                          secondary={
-                            <Typography
-                              variant="body2"
-                              sx={{
-                                color: theme.palette.text.secondary,
-                              mt: 0.5
-                            }}
-                          >
-                            {new Date(todo.created_at).toLocaleDateString('en-US', {
-                              year: 'numeric',
-                              month: 'short',
-                              day: 'numeric',
-                              hour: '2-digit',
-                              minute: '2-digit'
-                            })}
-                            </Typography>
-                          }
-                        />
-                      
-                        <ListItemSecondaryAction>
-                          <IconButton
-                            edge="end"
-                            onClick={() => {
-                              setEditingTodo(todo);
-                            setNewTodo(todo.notes);
-                              setDialogOpen(true);
-                            }}
-                            sx={{ mr: 1 }}
-                          >
-                            <EditIcon />
-                          </IconButton>
-                          <IconButton
-                            edge="end"
-                            onClick={() => handleDelete(todo.id)}
-                          >
-                            <DeleteIcon />
-                          </IconButton>
-                        </ListItemSecondaryAction>
-                      </ListItem>
-                    ))}
-                </List>
-              )}
-              </Paper>
-          )}
-      </Container>
+                          </Box>
+                        }
+                      />
+                      <ListItemSecondaryAction>
+                        <IconButton
+                          edge="end"
+                          aria-label="edit"
+                          onClick={() => handleEditTodo(todo)}
+                          sx={{ mr: 1 }}
+                        >
+                          <EditIcon />
+                        </IconButton>
+                        <IconButton
+                          edge="end"
+                          aria-label="delete"
+                          onClick={() => handleDelete(todo.id)}
+                          color="error"
+                        >
+                          <DeleteIcon />
+                        </IconButton>
+                      </ListItemSecondaryAction>
+                    </ListItem>
+                    {index < todos.length - 1 && <Divider />}
+                  </React.Fragment>
+                ))}
+              </List>
+            )}
+          </Paper>
+        </Container>
 
-        {/* Add/Edit Dialog */}
-      <Dialog 
-        open={dialogOpen} 
-        onClose={() => setDialogOpen(false)}
-        maxWidth="sm"
-        fullWidth
-      >
-          <DialogTitle sx={{ fontWeight: 600 }}>
-            {editingTodo ? 'Edit Todo' : 'Add New Todo'}
-        </DialogTitle>
-        <DialogContent>
-          <Box component="form" onSubmit={handleSubmit} sx={{ mt: 2 }}>
-            <TextField
-              fullWidth
-                label="Todo *"
-                value={newTodo}
-                onChange={(e) => setNewTodo(e.target.value)}
-              required
-              multiline
-                rows={4}
-                placeholder="Enter your todo..."
-              />
-          </Box>
-        </DialogContent>
-        <DialogActions>
-            <Button onClick={() => setDialogOpen(false)}>
-            Cancel
-          </Button>
-          <Button 
-              onClick={editingTodo ? () => handleUpdate(editingTodo) : handleSubmit}
-            variant="contained"
-          >
-              {editingTodo ? 'Update' : 'Add'} Todo
-          </Button>
-        </DialogActions>
-      </Dialog>
-
-      <Snackbar
-        open={notification.open}
-        autoHideDuration={6000}
-        onClose={() => setNotification(prev => ({ ...prev, open: false }))}
-        anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
-      >
-        <Alert 
-          onClose={() => setNotification(prev => ({ ...prev, open: false }))} 
-          severity={notification.severity}
-            sx={{ width: '100%' }}
+        {/* Add/Edit Todo Dialog */}
+        <Dialog 
+          open={editDialog.open} 
+          onClose={() => setEditDialog({ open: false, todo: null, notes: '', date: '', isNew: false })}
+          maxWidth="sm"
+          fullWidth
         >
-          {notification.message}
-        </Alert>
-      </Snackbar>
-    </Box>
+          <DialogTitle>
+            {editDialog.isNew ? 'Add New Todo' : 'Edit Todo'}
+          </DialogTitle>
+          <DialogContent>
+            <TextField
+              autoFocus
+              margin="dense"
+              label="Todo Description"
+              fullWidth
+              multiline
+              rows={3}
+              variant="outlined"
+              value={editDialog.notes}
+              onChange={(e) => setEditDialog({ ...editDialog, notes: e.target.value })}
+              sx={{ mb: 2 }}
+            />
+            <TextField
+              margin="dense"
+              label="Date"
+              type="date"
+              fullWidth
+              variant="outlined"
+              value={editDialog.date}
+              onChange={(e) => setEditDialog({ ...editDialog, date: e.target.value })}
+              InputLabelProps={{
+                shrink: true,
+              }}
+            />
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={() => setEditDialog({ open: false, todo: null, notes: '', date: '', isNew: false })}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveTodo} variant="contained">
+              {editDialog.isNew ? 'Add Todo' : 'Update Todo'}
+            </Button>
+          </DialogActions>
+        </Dialog>
+
+        <Snackbar
+          open={notification.open}
+          autoHideDuration={6000}
+          onClose={() => setNotification({ ...notification, open: false })}
+        >
+          <Alert severity={notification.severity} onClose={() => setNotification({ ...notification, open: false })}>
+            {notification.message}
+          </Alert>
+        </Snackbar>
+      </Box>
     </>
   );
 };

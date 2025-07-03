@@ -256,64 +256,36 @@ const AttendanceRecords = () => {
                 </Typography>
               </Box>
 
-              <Autocomplete
-                options={users}
-                getOptionLabel={(option) => `${option.full_name} (${option.email})`}
-                renderInput={(params) => (
-                  <TextField
-                    {...params}
-                    label="Search and Select User"
-                    variant="outlined"
-                    fullWidth
-                    placeholder="Type to search by name or email..."
-                  />
-                )}
-                renderOption={(props, option) => (
-                  <Box component="li" {...props}>
-                    <Avatar sx={{ mr: 2, bgcolor: theme.palette.primary.main }}>
-                      {option.full_name.charAt(0)}
-                    </Avatar>
-                    <Box>
-                      <Typography variant="body1" sx={{ fontWeight: 600 }}>
-                        {option.full_name}
-                      </Typography>
-                      <Typography variant="body2" color="textSecondary">
-                        {option.email}
-                      </Typography>
-                    </Box>
-                  </Box>
-                )}
-                onChange={(event, newValue) => {
-                  setSelectedUser(newValue);
-                }}
-                sx={{ maxWidth: 600, mx: 'auto' }}
-              />
-
-              <Box sx={{ mt: 4 }}>
-                <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
-                  Quick User List
-                </Typography>
-                <Grid container spacing={2}>
-                  {users.map((user) => (
-                    <Grid item xs={12} sm={6} md={4} key={user.id}>
+              {/* Tabular User Selection */}
+              <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 3, alignItems: 'flex-start' }}>
+                {/* User List */}
+                <Box sx={{ flex: 1, minWidth: { xs: '100%', md: '300px' } }}>
+                  <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
+                    Users
+                  </Typography>
+                  <Box sx={{ maxHeight: 400, overflowY: 'auto' }}>
+                    {users.map((user) => (
                       <Card 
+                        key={user.id}
                         sx={{ 
+                          mb: 1,
                           cursor: 'pointer',
                           transition: 'all 0.2s',
                           '&:hover': {
-                            transform: 'translateY(-2px)',
-                            boxShadow: theme.shadows[4]
+                            transform: 'translateX(4px)',
+                            boxShadow: theme.shadows[4],
+                            bgcolor: theme.palette.action.hover
                           }
                         }}
                         onClick={() => setSelectedUser(user)}
                       >
-                        <CardContent>
-                          <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                            <Avatar sx={{ mr: 2, bgcolor: theme.palette.primary.main }}>
+                        <CardContent sx={{ py: 2 }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                            <Avatar sx={{ mr: 2, bgcolor: theme.palette.primary.main, width: 40, height: 40 }}>
                               {user.full_name.charAt(0)}
                             </Avatar>
-                            <Box>
-                              <Typography variant="body1" sx={{ fontWeight: 600 }}>
+                            <Box sx={{ flex: 1 }}>
+                              <Typography variant="body1" sx={{ fontWeight: 600, mb: 0.5 }}>
                                 {user.full_name}
                               </Typography>
                               <Typography variant="body2" color="textSecondary">
@@ -323,9 +295,47 @@ const AttendanceRecords = () => {
                           </Box>
                         </CardContent>
                       </Card>
-                    </Grid>
-                  ))}
-                </Grid>
+                    ))}
+                  </Box>
+                </Box>
+
+                {/* Search and Filters */}
+                <Box sx={{ flex: 1, minWidth: { xs: '100%', md: '300px' } }}>
+                  <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
+                    Search & Select
+                  </Typography>
+                  <Autocomplete
+                    options={users}
+                    getOptionLabel={(option) => `${option.full_name} (${option.email})`}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        label="Search and Select User"
+                        variant="outlined"
+                        fullWidth
+                        placeholder="Type to search by name or email..."
+                      />
+                    )}
+                    renderOption={(props, option) => (
+                      <Box component="li" {...props}>
+                        <Avatar sx={{ mr: 2, bgcolor: theme.palette.primary.main }}>
+                          {option.full_name.charAt(0)}
+                        </Avatar>
+                        <Box>
+                          <Typography variant="body1" sx={{ fontWeight: 600 }}>
+                            {option.full_name}
+                          </Typography>
+                          <Typography variant="body2" color="textSecondary">
+                            {option.email}
+                          </Typography>
+                        </Box>
+                      </Box>
+                    )}
+                    onChange={(event, newValue) => {
+                      setSelectedUser(newValue);
+                    }}
+                  />
+                </Box>
               </Box>
             </Paper>
           ) : (
@@ -411,35 +421,40 @@ const AttendanceRecords = () => {
                 ) : (
                   <Box>
                     {/* Calendar Header */}
-                    <Grid container spacing={1} sx={{ mb: 2 }}>
+                    <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 1, mb: 2 }}>
                       {weekDays.map((day) => (
-                        <Grid item xs key={day}>
-                          <Typography
-                            variant="body2"
-                            sx={{
-                              textAlign: 'center',
-                              fontWeight: 600,
-                              p: 1,
-                              bgcolor: theme.palette.grey[100],
-                              borderRadius: 1
-                            }}
-                          >
-                            {day}
-                          </Typography>
-                        </Grid>
+                        <Typography
+                          key={day}
+                          variant="body2"
+                          sx={{
+                            textAlign: 'center',
+                            fontWeight: 600,
+                            p: 1,
+                            bgcolor: theme.palette.grey[100],
+                            borderRadius: 1
+                          }}
+                        >
+                          {day}
+                        </Typography>
                       ))}
-                    </Grid>
+                    </Box>
 
                     {/* Calendar Days */}
-                    <Grid container spacing={1}>
+                    <Box sx={{ 
+                      display: 'grid', 
+                      gridTemplateColumns: 'repeat(7, 1fr)', 
+                      gap: 1,
+                      aspectRatio: { xs: 'auto', md: '7/6' }
+                    }}>
                       {calendarData.map((dayData, index) => (
-                        <Grid item xs key={index}>
+                        <Box key={index} sx={{ aspectRatio: '1/1' }}>
                           {dayData.isEmpty ? (
-                            <Box sx={{ height: 80 }} />
+                            <Box sx={{ height: '100%' }} />
                           ) : (
                             <Card
                               sx={{
-                                height: 80,
+                                height: '100%',
+                                minHeight: { xs: 60, sm: 80, md: 100 },
                                 cursor: dayData.isWeekend ? 'default' : 'pointer',
                                 bgcolor: dayData.isWeekend
                                   ? theme.palette.grey[100]
@@ -453,7 +468,9 @@ const AttendanceRecords = () => {
                                 '&:hover': !dayData.isWeekend ? {
                                   boxShadow: theme.shadows[2],
                                   transform: 'translateY(-1px)'
-                                } : {}
+                                } : {},
+                                display: 'flex',
+                                flexDirection: 'column'
                               }}
                               onClick={() => {
                                 if (!dayData.isWeekend) {
@@ -465,34 +482,42 @@ const AttendanceRecords = () => {
                                 }
                               }}
                             >
-                              <CardContent sx={{ p: 1, textAlign: 'center', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-                                <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                              <CardContent sx={{ 
+                                p: 1, 
+                                textAlign: 'center', 
+                                height: '100%', 
+                                display: 'flex', 
+                                flexDirection: 'column', 
+                                justifyContent: 'space-between',
+                                '&:last-child': { pb: 1 }
+                              }}>
+                                <Typography variant="body2" sx={{ fontWeight: 600, fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
                                   {dayData.day}
                                 </Typography>
                                 
                                 {dayData.isWeekend ? (
-                                  <Typography variant="caption" color="textSecondary">
+                                  <Typography variant="caption" color="textSecondary" sx={{ fontSize: { xs: '0.6rem', sm: '0.75rem' } }}>
                                     OFF
                                   </Typography>
                                 ) : dayData.status ? (
                                   <Box sx={{ display: 'flex', justifyContent: 'center' }}>
                                     {dayData.status === 'present' ? (
-                                      <PresentIcon sx={{ fontSize: 16, color: theme.palette.success.main }} />
+                                      <PresentIcon sx={{ fontSize: { xs: 14, sm: 16 }, color: theme.palette.success.main }} />
                                     ) : (
-                                      <AbsentIcon sx={{ fontSize: 16, color: theme.palette.error.main }} />
+                                      <AbsentIcon sx={{ fontSize: { xs: 14, sm: 16 }, color: theme.palette.error.main }} />
                                     )}
                                   </Box>
                                 ) : (
-                                  <Typography variant="caption" color="textSecondary">
+                                  <Typography variant="caption" color="textSecondary" sx={{ fontSize: { xs: '0.6rem', sm: '0.75rem' } }}>
                                     Click to mark
                                   </Typography>
                                 )}
                               </CardContent>
                             </Card>
                           )}
-                        </Grid>
+                        </Box>
                       ))}
-                    </Grid>
+                    </Box>
                   </Box>
                 )}
               </Paper>

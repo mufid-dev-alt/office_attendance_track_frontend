@@ -5,16 +5,9 @@ import {
   Paper,
   Typography,
   Button,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
-  Autocomplete,
   TextField,
-  Grid,
   Card,
   CardContent,
-  CardActions,
   IconButton,
   Dialog,
   DialogTitle,
@@ -24,22 +17,20 @@ import {
   Alert,
   CircularProgress,
   useTheme,
-  Chip,
   Avatar,
   Divider,
+  List,
   ListItem,
   ListItemText,
-  ListItemSecondaryAction,
-  Checkbox
+  ListItemSecondaryAction
 } from '@mui/material';
 import {
   Edit as EditIcon,
   Delete as DeleteIcon,
   Add as AddIcon,
   Person as PersonIcon,
-  CheckCircle as CompletedIcon,
-  RadioButtonUnchecked as PendingIcon,
-  Assignment as TodoIcon
+  Assignment as TodoIcon,
+  DateRange as DateIcon
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import Header from '../common/Header';
@@ -56,6 +47,7 @@ const UserTodos = () => {
     open: false, 
     todo: null, 
     notes: '', 
+    date: '',
     isNew: false 
   });
   const [notification, setNotification] = useState({
@@ -102,6 +94,7 @@ const UserTodos = () => {
       open: true,
       todo: null,
       notes: '',
+      date: new Date().toISOString().split('T')[0],
       isNew: true
     });
   };
@@ -111,6 +104,7 @@ const UserTodos = () => {
       open: true,
       todo: todo,
       notes: todo.notes,
+      date: todo.date_created || new Date().toISOString().split('T')[0],
       isNew: false
     });
   };
@@ -118,6 +112,11 @@ const UserTodos = () => {
   const handleSaveTodo = async () => {
     if (!editDialog.notes.trim()) {
       showNotification('Please enter todo text', 'error');
+      return;
+    }
+
+    if (!editDialog.date) {
+      showNotification('Please select a date', 'error');
       return;
     }
 
@@ -130,7 +129,7 @@ const UserTodos = () => {
           body: JSON.stringify({
             user_id: selectedUser.id,
             notes: editDialog.notes,
-            completed: 0
+            date_created: editDialog.date
           })
         });
 
@@ -141,13 +140,9 @@ const UserTodos = () => {
         }
       } else {
         // Update existing todo
-        const response = await fetch(API_ENDPOINTS.todos.update(editDialog.todo.id), {
+        const response = await fetch(`${API_ENDPOINTS.todos.update(editDialog.todo.id)}?notes=${encodeURIComponent(editDialog.notes)}`, {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            notes: editDialog.notes,
-            completed: editDialog.todo.completed
-          })
+          headers: { 'Content-Type': 'application/json' }
         });
 
         if (response.ok) {
@@ -157,28 +152,10 @@ const UserTodos = () => {
         }
       }
 
-      setEditDialog({ open: false, todo: null, notes: '', isNew: false });
+      setEditDialog({ open: false, todo: null, notes: '', date: '', isNew: false });
       fetchUserTodos();
     } catch (error) {
       showNotification(error.message, 'error');
-    }
-  };
-
-  const handleToggleComplete = async (todo) => {
-    try {
-      const response = await fetch(`${API_ENDPOINTS.todos.update(todo.id)}?completed=${todo.completed ? 0 : 1}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' }
-      });
-
-      if (response.ok) {
-        showNotification(`Todo marked as ${todo.completed ? 'pending' : 'completed'}`, 'success');
-        fetchUserTodos();
-      } else {
-        throw new Error('Failed to update todo status');
-      }
-    } catch (error) {
-      showNotification('Error updating todo status', 'error');
     }
   };
 
@@ -217,9 +194,6 @@ const UserTodos = () => {
     }
   }, [fetchUserTodos]);
 
-  const completedTodos = todos.filter(todo => todo.completed);
-  const pendingTodos = todos.filter(todo => !todo.completed);
-
   return (
     <>
       <Header />
@@ -238,68 +212,40 @@ const UserTodos = () => {
                   Select a User to Manage Todos
                 </Typography>
                 <Typography variant="body1" color="textSecondary">
-                  Choose a user from the list below to view and manage their todo items
+                  Choose a user from the list below to view and edit their todos
                 </Typography>
               </Box>
 
-              <Autocomplete
-                options={users}
-                getOptionLabel={(option) => `${option.full_name} (${option.email})`}
-                renderInput={(params) => (
-                  <TextField
-                    {...params}
-                    label="Search and Select User"
-                    variant="outlined"
-                    fullWidth
-                    placeholder="Type to search by name or email..."
-                  />
-                )}
-                renderOption={(props, option) => (
-                  <Box component="li" {...props}>
-                    <Avatar sx={{ mr: 2, bgcolor: theme.palette.primary.main }}>
-                      {option.full_name.charAt(0)}
-                    </Avatar>
-                    <Box>
-                      <Typography variant="body1" sx={{ fontWeight: 600 }}>
-                        {option.full_name}
-                      </Typography>
-                      <Typography variant="body2" color="textSecondary">
-                        {option.email}
-                      </Typography>
-                    </Box>
-                  </Box>
-                )}
-                onChange={(event, newValue) => {
-                  setSelectedUser(newValue);
-                }}
-                sx={{ maxWidth: 600, mx: 'auto' }}
-              />
-
-              <Box sx={{ mt: 4 }}>
-                <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
-                  Quick User List
-                </Typography>
-                <Grid container spacing={2}>
-                  {users.map((user) => (
-                    <Grid item xs={12} sm={6} md={4} key={user.id}>
+              {/* Tabular User Selection */}
+              <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 3, alignItems: 'flex-start' }}>
+                {/* User List */}
+                <Box sx={{ flex: 1, minWidth: { xs: '100%', md: '300px' } }}>
+                  <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
+                    Users
+                  </Typography>
+                  <Box sx={{ maxHeight: 400, overflowY: 'auto' }}>
+                    {users.map((user) => (
                       <Card 
+                        key={user.id}
                         sx={{ 
+                          mb: 1,
                           cursor: 'pointer',
                           transition: 'all 0.2s',
                           '&:hover': {
-                            transform: 'translateY(-2px)',
-                            boxShadow: theme.shadows[4]
+                            transform: 'translateX(4px)',
+                            boxShadow: theme.shadows[4],
+                            bgcolor: theme.palette.action.hover
                           }
                         }}
                         onClick={() => setSelectedUser(user)}
                       >
-                        <CardContent>
-                          <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                            <Avatar sx={{ mr: 2, bgcolor: theme.palette.primary.main }}>
+                        <CardContent sx={{ py: 2 }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                            <Avatar sx={{ mr: 2, bgcolor: theme.palette.primary.main, width: 40, height: 40 }}>
                               {user.full_name.charAt(0)}
                             </Avatar>
-                            <Box>
-                              <Typography variant="body1" sx={{ fontWeight: 600 }}>
+                            <Box sx={{ flex: 1 }}>
+                              <Typography variant="body1" sx={{ fontWeight: 600, mb: 0.5 }}>
                                 {user.full_name}
                               </Typography>
                               <Typography variant="body2" color="textSecondary">
@@ -309,9 +255,9 @@ const UserTodos = () => {
                           </Box>
                         </CardContent>
                       </Card>
-                    </Grid>
-                  ))}
-                </Grid>
+                    ))}
+                  </Box>
+                </Box>
               </Box>
             </Paper>
           ) : (
@@ -353,189 +299,108 @@ const UserTodos = () => {
                 </Box>
               </Paper>
 
-              {/* Statistics */}
-              <Paper sx={{ p: 3, mb: 3 }}>
-                <Box sx={{ display: 'flex', justifyContent: 'center', gap: 4, flexWrap: 'wrap' }}>
-                  <Chip
-                    icon={<TodoIcon />}
-                    label={`Total Todos: ${todos.length}`}
-                    color="primary"
-                    variant="outlined"
-                  />
-                  <Chip
-                    icon={<PendingIcon />}
-                    label={`Pending: ${pendingTodos.length}`}
-                    color="warning"
-                    variant="outlined"
-                  />
-                  <Chip
-                    icon={<CompletedIcon />}
-                    label={`Completed: ${completedTodos.length}`}
-                    color="success"
-                    variant="outlined"
-                  />
-                </Box>
+              {/* Todos List */}
+              <Paper sx={{ p: 3 }}>
+                {loading ? (
+                  <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+                    <CircularProgress />
+                  </Box>
+                ) : todos.length === 0 ? (
+                  <Box sx={{ textAlign: 'center', py: 8 }}>
+                    <TodoIcon sx={{ fontSize: 60, color: theme.palette.grey[400], mb: 2 }} />
+                    <Typography variant="h6" color="textSecondary" sx={{ mb: 2 }}>
+                      No todos found
+                    </Typography>
+                    <Button
+                      variant="contained"
+                      startIcon={<AddIcon />}
+                      onClick={handleAddTodo}
+                    >
+                      Add First Todo
+                    </Button>
+                  </Box>
+                ) : (
+                  <List>
+                    {todos.map((todo, index) => (
+                      <React.Fragment key={todo.id}>
+                        <ListItem sx={{ py: 2 }}>
+                          <ListItemText
+                            primary={
+                              <Typography variant="body1" sx={{ fontWeight: 500, mb: 1 }}>
+                                {todo.notes}
+                              </Typography>
+                            }
+                            secondary={
+                              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <DateIcon sx={{ fontSize: 16, color: theme.palette.text.secondary }} />
+                                <Typography variant="body2" color="textSecondary">
+                                  Created: {todo.date_created ? new Date(todo.date_created).toLocaleDateString() : 'No date'}
+                                </Typography>
+                              </Box>
+                            }
+                          />
+                          <ListItemSecondaryAction>
+                            <IconButton
+                              edge="end"
+                              aria-label="edit"
+                              onClick={() => handleEditTodo(todo)}
+                              sx={{ mr: 1 }}
+                            >
+                              <EditIcon />
+                            </IconButton>
+                            <IconButton
+                              edge="end"
+                              aria-label="delete"
+                              onClick={() => handleDeleteTodo(todo.id, todo.notes)}
+                              color="error"
+                            >
+                              <DeleteIcon />
+                            </IconButton>
+                          </ListItemSecondaryAction>
+                        </ListItem>
+                        {index < todos.length - 1 && <Divider />}
+                      </React.Fragment>
+                    ))}
+                  </List>
+                )}
               </Paper>
-
-              {/* Todo Lists */}
-              {loading ? (
-                <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
-                  <CircularProgress />
-                </Box>
-              ) : (
-                <Grid container spacing={3}>
-                  {/* Pending Todos */}
-                  <Grid item xs={12} md={6}>
-                    <Paper sx={{ p: 3, height: 'fit-content' }}>
-                      <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, display: 'flex', alignItems: 'center' }}>
-                        <PendingIcon sx={{ mr: 1, color: theme.palette.warning.main }} />
-                        Pending Todos ({pendingTodos.length})
-                      </Typography>
-                      
-                      {pendingTodos.length === 0 ? (
-                        <Box sx={{ textAlign: 'center', py: 4 }}>
-                          <Typography variant="body2" color="textSecondary">
-                            No pending todos
-                          </Typography>
-                        </Box>
-                      ) : (
-                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                          {pendingTodos.map((todo) => (
-                            <Card key={todo.id} sx={{ border: '1px solid', borderColor: theme.palette.warning.light }}>
-                              <CardContent sx={{ pb: 1 }}>
-                                <Typography variant="body1" sx={{ mb: 1 }}>
-                                  {todo.notes}
-                                </Typography>
-                                <Typography variant="caption" color="textSecondary">
-                                  Created: {new Date(todo.created_at).toLocaleDateString()}
-                                </Typography>
-                              </CardContent>
-                              <CardActions sx={{ pt: 0, justifyContent: 'space-between' }}>
-                                <Box>
-                                  <IconButton
-                                    size="small"
-                                    onClick={() => handleToggleComplete(todo)}
-                                    color="success"
-                                    title="Mark as completed"
-                                  >
-                                    <CompletedIcon />
-                                  </IconButton>
-                                  <IconButton
-                                    size="small"
-                                    onClick={() => handleEditTodo(todo)}
-                                    color="primary"
-                                    title="Edit todo"
-                                  >
-                                    <EditIcon />
-                                  </IconButton>
-                                  <IconButton
-                                    size="small"
-                                    onClick={() => handleDeleteTodo(todo.id, todo.notes)}
-                                    color="error"
-                                    title="Delete todo"
-                                  >
-                                    <DeleteIcon />
-                                  </IconButton>
-                                </Box>
-                              </CardActions>
-                            </Card>
-                          ))}
-                        </Box>
-                      )}
-                    </Paper>
-                  </Grid>
-
-                  {/* Completed Todos */}
-                  <Grid item xs={12} md={6}>
-                    <Paper sx={{ p: 3, height: 'fit-content' }}>
-                      <Typography variant="h6" sx={{ fontWeight: 600, mb: 2, display: 'flex', alignItems: 'center' }}>
-                        <CompletedIcon sx={{ mr: 1, color: theme.palette.success.main }} />
-                        Completed Todos ({completedTodos.length})
-                      </Typography>
-                      
-                      {completedTodos.length === 0 ? (
-                        <Box sx={{ textAlign: 'center', py: 4 }}>
-                          <Typography variant="body2" color="textSecondary">
-                            No completed todos
-                          </Typography>
-                        </Box>
-                      ) : (
-                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                          {completedTodos.map((todo) => (
-                            <Card key={todo.id} sx={{ border: '1px solid', borderColor: theme.palette.success.light, bgcolor: theme.palette.success.light + '10' }}>
-                              <CardContent sx={{ pb: 1 }}>
-                                <Typography variant="body1" sx={{ mb: 1, textDecoration: 'line-through', opacity: 0.8 }}>
-                                  {todo.notes}
-                                </Typography>
-                                <Typography variant="caption" color="textSecondary">
-                                  Created: {new Date(todo.created_at).toLocaleDateString()}
-                                </Typography>
-                              </CardContent>
-                              <CardActions sx={{ pt: 0, justifyContent: 'space-between' }}>
-                                <Box>
-                                  <IconButton
-                                    size="small"
-                                    onClick={() => handleToggleComplete(todo)}
-                                    color="warning"
-                                    title="Mark as pending"
-                                  >
-                                    <PendingIcon />
-                                  </IconButton>
-                                  <IconButton
-                                    size="small"
-                                    onClick={() => handleEditTodo(todo)}
-                                    color="primary"
-                                    title="Edit todo"
-                                  >
-                                    <EditIcon />
-                                  </IconButton>
-                                  <IconButton
-                                    size="small"
-                                    onClick={() => handleDeleteTodo(todo.id, todo.notes)}
-                                    color="error"
-                                    title="Delete todo"
-                                  >
-                                    <DeleteIcon />
-                                  </IconButton>
-                                </Box>
-                              </CardActions>
-                            </Card>
-                          ))}
-                        </Box>
-                      )}
-                    </Paper>
-                  </Grid>
-                </Grid>
-              )}
             </Box>
           )}
         </Container>
 
-        {/* Add/Edit Todo Dialog */}
-        <Dialog 
-          open={editDialog.open} 
-          onClose={() => setEditDialog({ open: false, todo: null, notes: '', isNew: false })}
-          maxWidth="sm"
-          fullWidth
-        >
-          <DialogTitle sx={{ fontWeight: 600 }}>
+        {/* Edit Todo Dialog */}
+        <Dialog open={editDialog.open} onClose={() => setEditDialog({ open: false, todo: null, notes: '', date: '', isNew: false })} maxWidth="sm" fullWidth>
+          <DialogTitle>
             {editDialog.isNew ? 'Add New Todo' : 'Edit Todo'}
           </DialogTitle>
           <DialogContent>
             <TextField
               autoFocus
-              fullWidth
+              margin="dense"
               label="Todo Description"
+              fullWidth
               multiline
-              rows={4}
+              rows={3}
+              variant="outlined"
               value={editDialog.notes}
               onChange={(e) => setEditDialog({ ...editDialog, notes: e.target.value })}
-              placeholder="Enter todo description..."
-              sx={{ mt: 2 }}
+              sx={{ mb: 2 }}
+            />
+            <TextField
+              margin="dense"
+              label="Date"
+              type="date"
+              fullWidth
+              variant="outlined"
+              value={editDialog.date}
+              onChange={(e) => setEditDialog({ ...editDialog, date: e.target.value })}
+              InputLabelProps={{
+                shrink: true,
+              }}
             />
           </DialogContent>
           <DialogActions>
-            <Button onClick={() => setEditDialog({ open: false, todo: null, notes: '', isNew: false })}>
+            <Button onClick={() => setEditDialog({ open: false, todo: null, notes: '', date: '', isNew: false })}>
               Cancel
             </Button>
             <Button onClick={handleSaveTodo} variant="contained">
