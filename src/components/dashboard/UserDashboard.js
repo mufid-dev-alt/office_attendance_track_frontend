@@ -103,11 +103,18 @@ const Header = ({ onMenuClick }) => {
               sx={{ 
                 fontFamily: "'Poppins', sans-serif",
                 color: 'white',
-                border: '1px solid rgba(255,255,255,0.3)',
-                borderRadius: 0,
+                borderRadius: '24px',
+                px: 3,
+                py: 1,
+                background: 'rgba(255,255,255,0.1)',
+                backdropFilter: 'blur(10px)',
+                border: '1px solid rgba(255,255,255,0.2)',
+                transition: 'all 0.3s ease',
                 '&:hover': {
-                  backgroundColor: 'rgba(255,255,255,0.1)',
-                  border: '1px solid rgba(255,255,255,0.5)'
+                  backgroundColor: 'rgba(255,255,255,0.2)',
+                  border: '1px solid rgba(255,255,255,0.3)',
+                  transform: 'translateY(-2px)',
+                  boxShadow: '0 4px 20px rgba(0,0,0,0.1)'
                 }
               }}
             >
@@ -485,7 +492,22 @@ const UserDashboard = () => {
               Dashboard Overview
             </Typography>
             
-            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
+              <Button
+                variant="contained"
+                startIcon={<DownloadIcon />}
+                onClick={downloadMyAttendance}
+                disabled={downloading}
+                sx={{ 
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  '&:hover': {
+                    background: 'linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%)',
+                  }
+                }}
+              >
+                {downloading ? 'Downloading...' : 'Download Attendance'}
+              </Button>
+              
               <FormControl size="small" sx={{ minWidth: 120 }}>
                 <InputLabel>Month</InputLabel>
                 <Select

@@ -23,20 +23,21 @@ export const API_ENDPOINTS = {
         create: `${API_BASE_URL}/api/attendance`,
         list: `${API_BASE_URL}/api/attendance`,
         stats: `${API_BASE_URL}/api/attendance/stats`,
-        update: (id) => `${API_BASE_URL}/api/attendance/${id}`,
-        delete: (id) => `${API_BASE_URL}/api/attendance/${id}`
+        update: (attendanceId) => `${API_BASE_URL}/api/attendance/${attendanceId}`,
+        delete: (attendanceId) => `${API_BASE_URL}/api/attendance/${attendanceId}`
     },
     users: {
         list: `${API_BASE_URL}/api/users`,
         get: (id) => `${API_BASE_URL}/api/users/${id}`,
         create: `${API_BASE_URL}/api/users`,
-        delete: (id) => `${API_BASE_URL}/api/users/${id}`
+        update: (userId) => `${API_BASE_URL}/api/users/${userId}`,
+        delete: (userId) => `${API_BASE_URL}/api/users/${userId}`
     },
     todos: {
         create: `${API_BASE_URL}/api/todos`,
         list: `${API_BASE_URL}/api/todos`,
-        update: (id) => `${API_BASE_URL}/api/todos/${id}`,
-        delete: (id) => `${API_BASE_URL}/api/todos/${id}`
+        update: (todoId) => `${API_BASE_URL}/api/todos/${todoId}`,
+        delete: (todoId) => `${API_BASE_URL}/api/todos/${todoId}`
     }
 };
 

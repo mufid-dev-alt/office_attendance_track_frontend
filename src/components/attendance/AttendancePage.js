@@ -125,6 +125,7 @@ const AttendancePage = () => {
       const data = await response.json();
       setMessage(`Attendance marked as ${status} successfully!`);
       setTodayMarked(true);
+      setTodayAttendanceId(data.id); // Set the ID for undo functionality
       // Refresh attendance data
       await fetchAttendance();
     } catch (error) {
@@ -172,13 +173,11 @@ const AttendancePage = () => {
     
     try {
       const userData = JSON.parse(localStorage.getItem('user'));
-      const dashboardMonth = localStorage.getItem('selectedMonth');
-      const dashboardYear = localStorage.getItem('selectedYear');
       
       const params = new URLSearchParams();
       params.append('user_id', userData.id);
-      if (dashboardMonth) params.append('month', dashboardMonth);
-      if (dashboardYear) params.append('year', dashboardYear);
+      params.append('month', selectedMonth);
+      params.append('year', selectedYear);
       
       const response = await fetch(`${API_ENDPOINTS.attendance.list}?${params.toString()}`, {
         headers: { 'Accept': 'application/json' }
@@ -188,18 +187,19 @@ const AttendancePage = () => {
         const data = await response.json();
         if (!data || data.length === 0) {
           setMessage('No attendance data found for the selected period');
+          setDownloading(false);
           return;
         }
         
-        const csvContent = convertToCSV(data);
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        // Convert to Excel-like CSV format
+        const excelContent = convertToExcelFormat(data, userData);
+        const blob = new Blob([excelContent], { type: 'text/csv;charset=utf-8;' });
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
         
-        const monthName = dashboardMonth ? months[parseInt(dashboardMonth) - 1] : 'AllTime';
-        const yearName = dashboardYear || 'AllTime';
-        a.download = `${userData.full_name}_attendance_${monthName}_${yearName}.csv`;
+        const monthName = months[selectedMonth - 1];
+        a.download = `${userData.full_name.replace(/\s+/g, '_')}_${monthName}_${selectedYear}_Attendance.csv`;
         
         document.body.appendChild(a);
         a.click();
@@ -216,29 +216,26 @@ const AttendancePage = () => {
     }
   };
 
-  const convertToCSV = (data) => {
-    if (!data || data.length === 0) {
-      return 'No data available';
-    }
+  const convertToExcelFormat = (data, userData) => {
+    // Create header rows
+    let csv = `USERNAME - ${userData.full_name}\n`;
+    csv += `USER-EMAIL - ${userData.email}\n`;
+    csv += `DATE,DAY,ATTENDANCE\n`;
     
-    const headers = ['Date', 'Status', 'User Name', 'User Email'];
-    const csvHeaders = headers.join(',');
-    const csvRows = data.map(row => {
-      const values = [
-        row.date || '',
-        row.status || '',
-        row.user_name || '',
-        row.user_email || ''
-      ];
-      return values.map(value => {
-        if (typeof value === 'string' && (value.includes(',') || value.includes('"') || value.includes('\n'))) {
-          return `"${value.replace(/"/g, '""')}"`;
-        }
-        return value;
-      }).join(',');
+    // Sort data by date
+    const sortedData = [...data].sort((a, b) => new Date(a.date) - new Date(b.date));
+    
+    // Add data rows
+    sortedData.forEach(record => {
+      const date = new Date(record.date);
+      const dayName = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][date.getDay()];
+      const formattedDate = `${date.getDate()}-${months[date.getMonth()].substr(0, 3)}-${date.getFullYear().toString().substr(-2)}`;
+      const status = record.status === 'present' ? 'PRESENT' : record.status === 'absent' ? 'ABSENT' : 'OFF';
+      
+      csv += `${formattedDate},${dayName},${status}\n`;
     });
     
-    return [csvHeaders, ...csvRows].join('\n');
+    return csv;
   };
 
   useEffect(() => {
