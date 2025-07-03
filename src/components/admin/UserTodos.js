@@ -43,6 +43,8 @@ const UserTodos = () => {
   const [selectedUser, setSelectedUser] = useState(null);
   const [todos, setTodos] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filteredUsers, setFilteredUsers] = useState([]);
   const [editDialog, setEditDialog] = useState({ 
     open: false, 
     todo: null, 
@@ -65,7 +67,9 @@ const UserTodos = () => {
       const response = await fetch(API_ENDPOINTS.users.list);
       if (response.ok) {
         const data = await response.json();
-        setUsers(data.filter(user => user.role !== 'admin'));
+        const nonAdminUsers = data.filter(user => user.role !== 'admin');
+        setUsers(nonAdminUsers);
+        setFilteredUsers(nonAdminUsers);
       }
     } catch (error) {
       showNotification('Error fetching users', 'error');
@@ -194,6 +198,14 @@ const UserTodos = () => {
     }
   }, [fetchUserTodos]);
 
+  useEffect(() => {
+    const filtered = users.filter(user => 
+      user.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      user.email.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+    setFilteredUsers(filtered);
+  }, [users, searchQuery]);
+
   return (
     <>
       <Header />
@@ -216,48 +228,76 @@ const UserTodos = () => {
                 </Typography>
               </Box>
 
-              {/* Tabular User Selection */}
-              <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 3, alignItems: 'flex-start' }}>
-                {/* User List */}
-                <Box sx={{ flex: 1, minWidth: { xs: '100%', md: '300px' } }}>
-                  <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
-                    Users
-                  </Typography>
-                  <Box sx={{ maxHeight: 400, overflowY: 'auto' }}>
-                    {users.map((user) => (
-                      <Card 
-                        key={user.id}
-                        sx={{ 
-                          mb: 1,
-                          cursor: 'pointer',
-                          transition: 'all 0.2s',
-                          '&:hover': {
-                            transform: 'translateX(4px)',
-                            boxShadow: theme.shadows[4],
-                            bgcolor: theme.palette.action.hover
-                          }
-                        }}
-                        onClick={() => setSelectedUser(user)}
-                      >
-                        <CardContent sx={{ py: 2 }}>
-                          <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                            <Avatar sx={{ mr: 2, bgcolor: theme.palette.primary.main, width: 40, height: 40 }}>
-                              {user.full_name.charAt(0)}
-                            </Avatar>
-                            <Box sx={{ flex: 1 }}>
-                              <Typography variant="body1" sx={{ fontWeight: 600, mb: 0.5 }}>
-                                {user.full_name}
-                              </Typography>
-                              <Typography variant="body2" color="textSecondary">
-                                {user.email}
-                              </Typography>
-                            </Box>
-                          </Box>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </Box>
+              {/* Search Field */}
+              <Box sx={{ mb: 4, maxWidth: 600, mx: 'auto' }}>
+                <TextField
+                  fullWidth
+                  placeholder="Search by name or email..."
+                  variant="outlined"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: 3,
+                      fontSize: '1.1rem'
+                    }
+                  }}
+                />
+              </Box>
+
+              {/* Users List */}
+              <Box sx={{ maxWidth: 800, mx: 'auto' }}>
+                <Typography variant="h6" sx={{ mb: 3, fontWeight: 600, textAlign: 'left' }}>
+                  Users
+                </Typography>
+                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(3, 1fr)' }, gap: 2 }}>
+                  {filteredUsers.map((user) => (
+                    <Card 
+                      key={user.id}
+                      sx={{ 
+                        cursor: 'pointer',
+                        transition: 'all 0.3s ease',
+                        border: '2px solid transparent',
+                        '&:hover': {
+                          transform: 'translateY(-4px)',
+                          boxShadow: theme.shadows[8],
+                          borderColor: theme.palette.primary.main
+                        }
+                      }}
+                      onClick={() => setSelectedUser(user)}
+                    >
+                      <CardContent sx={{ p: 3, textAlign: 'center' }}>
+                        <Avatar 
+                          sx={{ 
+                            mx: 'auto', 
+                            mb: 2, 
+                            bgcolor: theme.palette.primary.main, 
+                            width: 56, 
+                            height: 56,
+                            fontSize: '1.5rem',
+                            fontWeight: 600
+                          }}
+                        >
+                          {user.full_name.charAt(0)}
+                        </Avatar>
+                        <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
+                          {user.full_name}
+                        </Typography>
+                        <Typography variant="body2" color="textSecondary">
+                          {user.email}
+                        </Typography>
+                      </CardContent>
+                    </Card>
+                  ))}
                 </Box>
+                
+                {filteredUsers.length === 0 && (
+                  <Box sx={{ textAlign: 'center', py: 4 }}>
+                    <Typography variant="body1" color="textSecondary">
+                      No users found matching your search
+                    </Typography>
+                  </Box>
+                )}
               </Box>
             </Paper>
           ) : (

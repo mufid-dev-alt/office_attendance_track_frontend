@@ -9,7 +9,6 @@ import {
   InputLabel,
   Select,
   MenuItem,
-  Autocomplete,
   TextField,
   Grid,
   Card,
@@ -57,6 +56,8 @@ const AttendanceRecords = () => {
     message: '',
     severity: 'success'
   });
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filteredUsers, setFilteredUsers] = useState([]);
 
   const months = [
     'January', 'February', 'March', 'April', 'May', 'June',
@@ -73,6 +74,7 @@ const AttendanceRecords = () => {
       if (response.ok) {
         const data = await response.json();
         setUsers(data.filter(user => user.role !== 'admin'));
+        setFilteredUsers(data.filter(user => user.role !== 'admin'));
       }
     } catch (error) {
       showNotification('Error fetching users', 'error');
@@ -229,6 +231,14 @@ const AttendanceRecords = () => {
     }
   }, [fetchUserAttendance]);
 
+  useEffect(() => {
+    const filtered = users.filter(user => 
+      user.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      user.email.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+    setFilteredUsers(filtered);
+  }, [users, searchQuery]);
+
   const calendarData = selectedUser ? generateCalendarData() : [];
   const presentDays = calendarData.filter(day => day.status === 'present').length;
   const absentDays = calendarData.filter(day => day.status === 'absent').length;
@@ -256,86 +266,76 @@ const AttendanceRecords = () => {
                 </Typography>
               </Box>
 
-              {/* Tabular User Selection */}
-              <Box sx={{ display: 'flex', flexDirection: { xs: 'column', md: 'row' }, gap: 3, alignItems: 'flex-start' }}>
-                {/* User List */}
-                <Box sx={{ flex: 1, minWidth: { xs: '100%', md: '300px' } }}>
-                  <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
-                    Users
-                  </Typography>
-                  <Box sx={{ maxHeight: 400, overflowY: 'auto' }}>
-                    {users.map((user) => (
-                      <Card 
-                        key={user.id}
-                        sx={{ 
-                          mb: 1,
-                          cursor: 'pointer',
-                          transition: 'all 0.2s',
-                          '&:hover': {
-                            transform: 'translateX(4px)',
-                            boxShadow: theme.shadows[4],
-                            bgcolor: theme.palette.action.hover
-                          }
-                        }}
-                        onClick={() => setSelectedUser(user)}
-                      >
-                        <CardContent sx={{ py: 2 }}>
-                          <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                            <Avatar sx={{ mr: 2, bgcolor: theme.palette.primary.main, width: 40, height: 40 }}>
-                              {user.full_name.charAt(0)}
-                            </Avatar>
-                            <Box sx={{ flex: 1 }}>
-                              <Typography variant="body1" sx={{ fontWeight: 600, mb: 0.5 }}>
-                                {user.full_name}
-                              </Typography>
-                              <Typography variant="body2" color="textSecondary">
-                                {user.email}
-                              </Typography>
-                            </Box>
-                          </Box>
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </Box>
-                </Box>
+              {/* Search Field */}
+              <Box sx={{ mb: 4, maxWidth: 600, mx: 'auto' }}>
+                <TextField
+                  fullWidth
+                  placeholder="Search by name or email..."
+                  variant="outlined"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: 3,
+                      fontSize: '1.1rem'
+                    }
+                  }}
+                />
+              </Box>
 
-                {/* Search and Filters */}
-                <Box sx={{ flex: 1, minWidth: { xs: '100%', md: '300px' } }}>
-                  <Typography variant="h6" sx={{ mb: 2, fontWeight: 600 }}>
-                    Search & Select
-                  </Typography>
-                  <Autocomplete
-                    options={users}
-                    getOptionLabel={(option) => `${option.full_name} (${option.email})`}
-                    renderInput={(params) => (
-                      <TextField
-                        {...params}
-                        label="Search and Select User"
-                        variant="outlined"
-                        fullWidth
-                        placeholder="Type to search by name or email..."
-                      />
-                    )}
-                    renderOption={(props, option) => (
-                      <Box component="li" {...props}>
-                        <Avatar sx={{ mr: 2, bgcolor: theme.palette.primary.main }}>
-                          {option.full_name.charAt(0)}
+              {/* Users List */}
+              <Box sx={{ maxWidth: 800, mx: 'auto' }}>
+                <Typography variant="h6" sx={{ mb: 3, fontWeight: 600, textAlign: 'left' }}>
+                  Users
+                </Typography>
+                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(3, 1fr)' }, gap: 2 }}>
+                  {filteredUsers.map((user) => (
+                    <Card 
+                      key={user.id}
+                      sx={{ 
+                        cursor: 'pointer',
+                        transition: 'all 0.3s ease',
+                        border: '2px solid transparent',
+                        '&:hover': {
+                          transform: 'translateY(-4px)',
+                          boxShadow: theme.shadows[8],
+                          borderColor: theme.palette.primary.main
+                        }
+                      }}
+                      onClick={() => setSelectedUser(user)}
+                    >
+                      <CardContent sx={{ p: 3, textAlign: 'center' }}>
+                        <Avatar 
+                          sx={{ 
+                            mx: 'auto', 
+                            mb: 2, 
+                            bgcolor: theme.palette.primary.main, 
+                            width: 56, 
+                            height: 56,
+                            fontSize: '1.5rem',
+                            fontWeight: 600
+                          }}
+                        >
+                          {user.full_name.charAt(0)}
                         </Avatar>
-                        <Box>
-                          <Typography variant="body1" sx={{ fontWeight: 600 }}>
-                            {option.full_name}
-                          </Typography>
-                          <Typography variant="body2" color="textSecondary">
-                            {option.email}
-                          </Typography>
-                        </Box>
-                      </Box>
-                    )}
-                    onChange={(event, newValue) => {
-                      setSelectedUser(newValue);
-                    }}
-                  />
+                        <Typography variant="h6" sx={{ fontWeight: 600, mb: 1 }}>
+                          {user.full_name}
+                        </Typography>
+                        <Typography variant="body2" color="textSecondary">
+                          {user.email}
+                        </Typography>
+                      </CardContent>
+                    </Card>
+                  ))}
                 </Box>
+                
+                {filteredUsers.length === 0 && (
+                  <Box sx={{ textAlign: 'center', py: 4 }}>
+                    <Typography variant="body1" color="textSecondary">
+                      No users found matching your search
+                    </Typography>
+                  </Box>
+                )}
               </Box>
             </Paper>
           ) : (
