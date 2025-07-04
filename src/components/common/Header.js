@@ -50,11 +50,11 @@ const Header = () => {
               >
                 Welcome, {user.full_name}
               </Typography>
-              <Button
-                color="inherit"
+              <Button 
+                color="inherit" 
                 onClick={handleLogout}
                 startIcon={<LogoutIcon />}
-                sx={{ 
+                sx={{
                   fontFamily: "'Poppins', sans-serif",
                   color: 'white',
                   borderRadius: '24px',

@@ -44,6 +44,7 @@ const ManageUsers = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [userToDelete, setUserToDelete] = useState(null);
   const [recentlyDeleted, setRecentlyDeleted] = useState([]);
+  const [currentTime, setCurrentTime] = useState(new Date());
   const [formData, setFormData] = useState({
     id: '',
     full_name: '',
@@ -59,6 +60,18 @@ const ManageUsers = () => {
   const showNotification = useCallback((message, severity) => {
     setNotification({ open: true, message, severity });
   }, []);
+
+  const getRemainingTime = useCallback((deletedAt) => {
+    const deletedTime = new Date(deletedAt);
+    const timeDiff = 5 * 60 * 1000 - (currentTime - deletedTime); // 5 minutes in ms
+    
+    if (timeDiff <= 0) return null;
+    
+    const minutes = Math.floor(timeDiff / 60000);
+    const seconds = Math.floor((timeDiff % 60000) / 1000);
+    
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  }, [currentTime]);
 
   const fetchUsers = useCallback(async () => {
     setLoading(true);
@@ -118,6 +131,12 @@ const ManageUsers = () => {
         setDeleteDialogOpen(false);
         setUserToDelete(null);
         fetchUsers();
+        
+        // Notify other admin components about the update
+        localStorage.setItem('userUpdate', JSON.stringify({
+          type: 'user_deleted',
+          timestamp: new Date().toISOString()
+        }));
       } else {
         const error = await response.json();
         throw new Error(error.detail || 'Failed to delete user');
@@ -142,6 +161,12 @@ const ManageUsers = () => {
         
         showNotification(`${result.restored_user.full_name} and all their data has been restored`, 'success');
         fetchUsers();
+        
+        // Notify other admin components about the update
+        localStorage.setItem('userUpdate', JSON.stringify({
+          type: 'user_restored',
+          timestamp: new Date().toISOString()
+        }));
       } else {
         const error = await response.json();
         throw new Error(error.detail || 'Failed to restore user');
@@ -187,6 +212,12 @@ const ManageUsers = () => {
           password: ''
         });
         fetchUsers();
+        
+        // Notify other admin components about the update
+        localStorage.setItem('userUpdate', JSON.stringify({
+          type: 'user_added',
+          timestamp: new Date().toISOString()
+        }));
       } else {
         const error = await response.json();
         throw new Error(error.detail || 'Failed to add user');
@@ -204,6 +235,38 @@ const ManageUsers = () => {
     }
     fetchUsers();
   }, [fetchUsers, navigate]);
+
+  // Auto-refresh users every 30 seconds to catch updates
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchUsers();
+    }, 30000); // 30 seconds
+
+    return () => clearInterval(interval);
+  }, [fetchUsers]);
+
+  // Update current time every second for countdown
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  // Clear recently deleted users after 5 minutes
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const now = new Date();
+      setRecentlyDeleted(prev => prev.filter(user => {
+        const deletedTime = new Date(user.deletedAt);
+        const timeDiff = now - deletedTime;
+        return timeDiff < 5 * 60 * 1000; // 5 minutes
+      }));
+    }, 60000); // Check every minute
+
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <>
@@ -236,20 +299,26 @@ const ManageUsers = () => {
                 Recently Deleted Users
               </Typography>
               <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
-                These users have been permanently deleted. Click "Undo" to restore them and all their data.
+                These users have been permanently deleted. Click "Undo" to restore them and all their data. 
+                <strong>Undo option expires after 5 minutes.</strong>
               </Typography>
               <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-                {recentlyDeleted.map((user) => (
-                  <Chip
-                    key={user.id}
-                    label={`${user.full_name} (ID: ${user.id})`}
-                    color="warning"
-                    variant="outlined"
-                    deleteIcon={<UndoIcon />}
-                    onDelete={() => handleUndo(user.id)}
-                    sx={{ mb: 1 }}
-                  />
-                ))}
+                {recentlyDeleted.map((user) => {
+                  const remainingTime = getRemainingTime(user.deletedAt);
+                  if (!remainingTime) return null; // Don't show expired items
+                  
+                  return (
+                    <Chip
+                      key={user.id}
+                      label={`${user.full_name} (ID: ${user.id}) - ${remainingTime}`}
+                      color="warning"
+                      variant="outlined"
+                      deleteIcon={<UndoIcon />}
+                      onDelete={() => handleUndo(user.id)}
+                      sx={{ mb: 1 }}
+                    />
+                  );
+                })}
               </Stack>
             </Paper>
           )}

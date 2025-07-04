@@ -410,11 +410,11 @@ const AttendancePage = () => {
                   >
                     Undo
                   </Button>
-                  <Chip 
-                    label="Today's attendance already marked" 
-                    color="info" 
-                    size="small"
-                  />
+                <Chip 
+                  label="Today's attendance already marked" 
+                  color="info" 
+                  size="small"
+                />
                 </>
               )}
             </Box>

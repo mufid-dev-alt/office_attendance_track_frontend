@@ -467,6 +467,28 @@ const AdminDashboard = () => {
     fetchUserStats();
   };
 
+  // Auto-refresh data every 30 seconds to catch updates from other admin sessions
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchUsers();
+    }, 30000); // 30 seconds
+
+    return () => clearInterval(interval);
+  }, [fetchUsers]);
+
+  // Listen for user updates from other admin components
+  useEffect(() => {
+    const handleStorageChange = (e) => {
+      if (e.key === 'userUpdate') {
+        fetchUsers();
+        fetchUserStats();
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, [fetchUsers, fetchUserStats]);
+
   return (
     <Box sx={{ display: 'flex' }}>
       <AdminHeader onMenuClick={handleDrawerToggle} />

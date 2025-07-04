@@ -225,6 +225,27 @@ const AttendanceRecords = () => {
     fetchUsers();
   }, [fetchUsers, navigate]);
 
+  // Auto-refresh users every 30 seconds to catch updates
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchUsers();
+    }, 30000); // 30 seconds
+
+    return () => clearInterval(interval);
+  }, [fetchUsers]);
+
+  // Listen for user updates from other admin components
+  useEffect(() => {
+    const handleStorageChange = (e) => {
+      if (e.key === 'userUpdate') {
+        fetchUsers();
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, [fetchUsers]);
+
   useEffect(() => {
     if (selectedUser) {
       fetchUserAttendance();

@@ -141,17 +141,17 @@ const Sidebar = ({ open, onClose }) => {
   return (
     <>
       {/* Mobile Drawer */}
-      <Drawer
+    <Drawer
         variant="temporary"
-        open={open}
+      open={open}
         onClose={onClose}
         ModalProps={{
           keepMounted: true,
         }}
-        sx={{
+      sx={{
           display: { xs: 'block', sm: 'none' },
-          '& .MuiDrawer-paper': {
-            boxSizing: 'border-box',
+        '& .MuiDrawer-paper': {
+          boxSizing: 'border-box',
             width: drawerWidth,
           },
         }}
@@ -205,49 +205,49 @@ const Sidebar = ({ open, onClose }) => {
             boxSizing: 'border-box',
             width: drawerWidth,
             backgroundColor: theme.palette.background.default,
-            borderRight: `1px solid ${theme.palette.divider}`
+          borderRight: `1px solid ${theme.palette.divider}`
           },
-        }}
+      }}
         open
-      >
-        <Toolbar />
-        <Box sx={{ overflow: 'auto', mt: 2 }}>
-          <List>
-            {menuItems.map((item) => (
-              <ListItem
-                button
-                key={item.text}
-                component={Link}
-                to={item.path}
-                sx={{
-                  mb: 1,
-                  mx: 1,
-                  borderRadius: 1,
-                  '&:hover': {
-                    backgroundColor: theme.palette.primary.light,
-                    '& .MuiListItemIcon-root, & .MuiListItemText-primary': {
-                      color: theme.palette.primary.main
-                    }
+    >
+      <Toolbar />
+      <Box sx={{ overflow: 'auto', mt: 2 }}>
+        <List>
+          {menuItems.map((item) => (
+            <ListItem
+              button
+              key={item.text}
+              component={Link}
+              to={item.path}
+              sx={{
+                mb: 1,
+                mx: 1,
+                borderRadius: 1,
+                '&:hover': {
+                  backgroundColor: theme.palette.primary.light,
+                  '& .MuiListItemIcon-root, & .MuiListItemText-primary': {
+                    color: theme.palette.primary.main
                   }
-                }}
-              >
-                <ListItemIcon sx={{ color: theme.palette.text.secondary }}>
-                  {item.icon}
-                </ListItemIcon>
-                <ListItemText 
-                  primary={item.text} 
-                  sx={{ 
-                    '& .MuiTypography-root': { 
-                      fontFamily: "'Poppins', sans-serif",
-                      fontWeight: 500
-                    } 
-                  }} 
-                />
-              </ListItem>
-            ))}
-          </List>
-        </Box>
-      </Drawer>
+                }
+              }}
+            >
+              <ListItemIcon sx={{ color: theme.palette.text.secondary }}>
+                {item.icon}
+              </ListItemIcon>
+              <ListItemText 
+                primary={item.text} 
+                sx={{ 
+                  '& .MuiTypography-root': { 
+                    fontFamily: "'Poppins', sans-serif",
+                    fontWeight: 500
+                  } 
+                }} 
+              />
+            </ListItem>
+          ))}
+        </List>
+      </Box>
+    </Drawer>
     </>
   );
 };
@@ -507,16 +507,16 @@ const UserDashboard = () => {
       >
         <Container maxWidth="lg">
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4, flexWrap: 'wrap', gap: 2 }}>
-            <Typography 
-              variant="h4" 
-              sx={{ 
-                fontFamily: "'Poppins', sans-serif",
-                fontWeight: 600,
-                color: theme.palette.text.primary
-              }}
-            >
-              Dashboard Overview
-            </Typography>
+          <Typography 
+            variant="h4" 
+            sx={{ 
+              fontFamily: "'Poppins', sans-serif",
+              fontWeight: 600,
+              color: theme.palette.text.primary
+            }}
+          >
+            Dashboard Overview
+          </Typography>
             
             <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
               <Button

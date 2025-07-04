@@ -43,18 +43,18 @@ const Login = () => {
     const loginUrl = `${API_ENDPOINTS.auth.login}?email=${formData.email}&password=${formData.password}`;
     
     try {
-      const response = await fetch(loginUrl, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        mode: 'cors'
-      });
+    const response = await fetch(loginUrl, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+      mode: 'cors'
+    });
 
-      const data = await response.json();
+    const data = await response.json();
 
-      if (data && data.success && data.user) {
+    if (data && data.success && data.user) {
         // Check if user role matches selected tab
         if (activeTab === 'admin' && data.user.role !== 'admin') {
           setError('Admin access required. Please use User login.');
@@ -64,18 +64,18 @@ const Login = () => {
         
         if (activeTab === 'user' && data.user.role === 'admin') {
           setError('Please use Admin login for administrative access.');
-          setLoading(false);
-          return;
-        }
+        setLoading(false);
+        return;
+      }
 
-        localStorage.setItem('user', JSON.stringify(data.user));
-        
-        // Navigate based on role
-        if (data.user.role === 'admin') {
-          navigate('/admin');
-        } else {
-          navigate('/dashboard');
-        }
+      localStorage.setItem('user', JSON.stringify(data.user));
+      
+      // Navigate based on role
+      if (data.user.role === 'admin') {
+        navigate('/admin');
+      } else {
+        navigate('/dashboard');
+      }
       } else {
         setError('Invalid email or password');
       }
