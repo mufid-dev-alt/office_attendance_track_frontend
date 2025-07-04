@@ -46,7 +46,6 @@ const ManageUsers = () => {
   const [recentlyDeleted, setRecentlyDeleted] = useState([]);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [formData, setFormData] = useState({
-    id: '',
     full_name: '',
     email: '',
     password: ''
@@ -95,7 +94,6 @@ const ManageUsers = () => {
 
   const handleAddUser = () => {
     setFormData({
-      id: '',
       full_name: '',
       email: '',
       password: ''
@@ -177,15 +175,21 @@ const ManageUsers = () => {
   };
 
   const handleSubmit = async () => {
-    if (!formData.id || !formData.full_name || !formData.email || !formData.password) {
+    if (!formData.full_name || !formData.email || !formData.password) {
       showNotification('Please fill in all fields', 'error');
       return;
     }
 
-    // Validate User ID is a number
-    const userId = parseInt(formData.id);
-    if (isNaN(userId) || userId <= 0) {
-      showNotification('User ID must be a positive number', 'error');
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(formData.email)) {
+      showNotification('Please enter a valid email address', 'error');
+      return;
+    }
+
+    // Validate password strength
+    if (formData.password.length < 6) {
+      showNotification('Password must be at least 6 characters long', 'error');
       return;
     }
 
@@ -194,7 +198,6 @@ const ManageUsers = () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          id: userId,
           email: formData.email,
           password: formData.password,
           full_name: formData.full_name,
@@ -206,7 +209,6 @@ const ManageUsers = () => {
         showNotification('User added successfully', 'success');
         setDialogOpen(false);
         setFormData({
-          id: '',
           full_name: '',
           email: '',
           password: ''
@@ -292,20 +294,7 @@ const ManageUsers = () => {
             </Button>
           </Box>
 
-          {/* Vercel Notice */}
-          <Paper sx={{ p: 3, mb: 3, backgroundColor: '#e3f2fd', border: '1px solid #2196f3' }}>
-            <Typography variant="h6" sx={{ mb: 2, fontWeight: 600, color: '#1976d2', display: 'flex', alignItems: 'center', gap: 1 }}>
-              ℹ️ Demo Environment Notice
-            </Typography>
-            <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
-              <strong>Important:</strong> This application is running on Vercel's serverless platform for demonstration purposes. 
-              New users will persist during your current session but may reset when the serverless function restarts. 
-              For production use, a persistent database solution (PostgreSQL, MongoDB, etc.) would be implemented.
-            </Typography>
-            <Typography variant="body2" color="textSecondary">
-              <strong>Current session features:</strong> ✅ Add users ✅ Delete users ✅ Undo functionality ✅ Real-time updates
-            </Typography>
-          </Paper>
+
 
           {/* Recently Deleted Users */}
           {recentlyDeleted.length > 0 && (
@@ -444,16 +433,7 @@ const ManageUsers = () => {
               onSubmit={(e) => { e.preventDefault(); handleSubmit(); }}
               sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 2 }}
             >
-              <TextField
-                fullWidth
-                label="User ID *"
-                type="number"
-                value={formData.id}
-                onChange={(e) => setFormData({ ...formData, id: e.target.value })}
-                helperText="Unique identifier for the user (must be a positive number)"
-                required
-                inputProps={{ min: 1 }}
-              />
+
               
               <TextField
                 fullWidth
