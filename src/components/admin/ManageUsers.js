@@ -72,6 +72,31 @@ const ManageUsers = () => {
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   }, [currentTime]);
 
+  // Function to save users to localStorage for persistence
+  const saveUsersToLocalStorage = useCallback((usersList) => {
+    try {
+      localStorage.setItem('persistentUsers', JSON.stringify(usersList));
+      console.log(`💾 Saved ${usersList.length} users to localStorage`);
+    } catch (error) {
+      console.error('Error saving users to localStorage:', error);
+    }
+  }, []);
+
+  // Function to load users from localStorage
+  const loadUsersFromLocalStorage = useCallback(() => {
+    try {
+      const savedUsers = localStorage.getItem('persistentUsers');
+      if (savedUsers) {
+        const parsedUsers = JSON.parse(savedUsers);
+        console.log(`📂 Loaded ${parsedUsers.length} users from localStorage`);
+        return parsedUsers;
+      }
+    } catch (error) {
+      console.error('Error loading users from localStorage:', error);
+    }
+    return null;
+  }, []);
+
   const fetchUsers = useCallback(async () => {
     setLoading(true);
     try {
@@ -81,16 +106,44 @@ const ManageUsers = () => {
 
       if (response.ok) {
         const data = await response.json();
-        setUsers(data.filter(user => user.role !== 'admin'));
+        const filteredUsers = data.filter(user => user.role !== 'admin');
+        
+        // Check if we got fewer users than we had saved (indicating a backend reset)
+        const savedUsers = loadUsersFromLocalStorage();
+        
+        if (savedUsers && savedUsers.length > filteredUsers.length && filteredUsers.length <= 5) {
+          // Backend reset detected - use our saved users instead
+          console.log('⚠️ Backend reset detected! Using localStorage backup');
+          showNotification('Backend reset detected. Using locally saved user data.', 'warning');
+          setUsers(savedUsers);
+        } else {
+          // Normal case - use backend data and save it
+          setUsers(filteredUsers);
+          saveUsersToLocalStorage(filteredUsers);
+        }
       } else {
-        throw new Error('Failed to fetch users');
+        // On error, try to load from localStorage
+        const savedUsers = loadUsersFromLocalStorage();
+        if (savedUsers) {
+          showNotification('Using locally saved user data due to API error', 'warning');
+          setUsers(savedUsers);
+        } else {
+          throw new Error('Failed to fetch users');
+        }
       }
     } catch (error) {
       showNotification('Error fetching users', 'error');
+      
+      // Try to load from localStorage on error
+      const savedUsers = loadUsersFromLocalStorage();
+      if (savedUsers) {
+        showNotification('Using locally saved user data', 'info');
+        setUsers(savedUsers);
+      }
     } finally {
       setLoading(false);
     }
-  }, [showNotification]);
+  }, [showNotification, loadUsersFromLocalStorage, saveUsersToLocalStorage]);
 
   const handleAddUser = () => {
     setFormData({
@@ -128,12 +181,23 @@ const ManageUsers = () => {
         showNotification(`${userToDelete.full_name} and all their data has been permanently deleted`, 'success');
         setDeleteDialogOpen(false);
         setUserToDelete(null);
+        
+        // Update local state and localStorage
+        setUsers(prevUsers => {
+          const updatedUsers = prevUsers.filter(user => user.id !== userToDelete.id);
+          // Save to localStorage
+          saveUsersToLocalStorage(updatedUsers);
+          return updatedUsers;
+        });
+        
+        // Also fetch from server to keep in sync
         fetchUsers();
         
         // Notify other admin components about the update
         localStorage.setItem('userUpdate', JSON.stringify({
           type: 'user_deleted',
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
+          userId: userToDelete.id
         }));
       } else {
         const error = await response.json();
@@ -158,12 +222,34 @@ const ManageUsers = () => {
         setRecentlyDeleted(prev => prev.filter(user => user.id !== userId));
         
         showNotification(`${result.restored_user.full_name} and all their data has been restored`, 'success');
+        
+        // Find the user in recently deleted list to restore to localStorage
+        const restoredUser = recentlyDeleted.find(user => user.id === userId);
+        if (restoredUser) {
+          // Update local state and localStorage
+          setUsers(prevUsers => {
+            const updatedUsers = [...prevUsers, {
+              id: restoredUser.id,
+              email: restoredUser.email,
+              full_name: restoredUser.full_name,
+              role: restoredUser.role || 'user',
+              created_at: restoredUser.created_at || new Date().toISOString()
+            }];
+            // Save to localStorage
+            saveUsersToLocalStorage(updatedUsers);
+            return updatedUsers;
+          });
+        }
+        
+        // Also fetch from server to keep in sync
         fetchUsers();
         
         // Notify other admin components about the update
         localStorage.setItem('userUpdate', JSON.stringify({
           type: 'user_restored',
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
+          userId: userId,
+          user: result.restored_user
         }));
       } else {
         const error = await response.json();
@@ -206,6 +292,7 @@ const ManageUsers = () => {
       });
 
       if (response.ok) {
+        const newUser = await response.json();
         showNotification('User added successfully', 'success');
         setDialogOpen(false);
         setFormData({
@@ -213,12 +300,32 @@ const ManageUsers = () => {
           email: '',
           password: ''
         });
+        
+        // Also update local state and localStorage directly
+        const newUserObj = {
+          id: newUser.id,
+          email: newUser.email,
+          full_name: newUser.full_name,
+          role: newUser.role,
+          created_at: newUser.created_at
+        };
+        
+        // Update local state
+        setUsers(prevUsers => {
+          const updatedUsers = [...prevUsers, newUserObj];
+          // Save to localStorage
+          saveUsersToLocalStorage(updatedUsers);
+          return updatedUsers;
+        });
+        
+        // Also fetch from server to keep in sync
         fetchUsers();
         
         // Notify other admin components about the update
         localStorage.setItem('userUpdate', JSON.stringify({
           type: 'user_added',
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
+          user: newUserObj
         }));
       } else {
         const error = await response.json();
@@ -328,9 +435,18 @@ const ManageUsers = () => {
           )}
 
           <Paper sx={{ p: 3 }}>
-            <Typography variant="h6" sx={{ mb: 3, fontWeight: 600 }}>
-              Active Users ({users.length})
-            </Typography>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+              <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                Active Users ({users.length})
+              </Typography>
+              <Chip 
+                label="Client-side persistence enabled" 
+                color="primary" 
+                size="small"
+                variant="outlined"
+                sx={{ fontSize: '0.7rem' }}
+              />
+            </Box>
             
             {loading ? (
               <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
