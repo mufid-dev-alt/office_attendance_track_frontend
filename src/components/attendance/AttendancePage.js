@@ -56,6 +56,29 @@ const AttendancePage = () => {
     return dayOfWeek === 0 || dayOfWeek === 6; // Sunday = 0, Saturday = 6
   };
 
+  // Force sync attendance data with the backend
+  const forceSync = async () => {
+    try {
+      setMessage('Syncing attendance data...');
+      const response = await fetch(`${API_ENDPOINTS.attendance.base}/force-sync`, {
+        method: 'POST',
+        headers: { 'Accept': 'application/json' }
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        setMessage(`Attendance data synced successfully (${result.record_count} records)`);
+        // Refresh attendance data
+        await fetchAttendance();
+      } else {
+        throw new Error('Failed to sync attendance data');
+      }
+    } catch (error) {
+      setMessage('Error syncing attendance data');
+      console.error('Error:', error);
+    }
+  };
+
   const fetchAttendance = useCallback(async () => {
     setLoading(true);
     try {
@@ -130,8 +153,8 @@ const AttendancePage = () => {
       setTodayMarked(true);
       setTodayAttendanceId(data.id); // Set the ID for undo functionality
       
-      // Notify other components about the attendance update using eventService
-      eventService.attendanceUpdated(userData.id, today, status);
+      // Force sync with backend to ensure data is persisted
+      await forceSync();
       
       // Refresh attendance data
       await fetchAttendance();
@@ -166,10 +189,8 @@ const AttendancePage = () => {
       setTodayMarked(false);
       setTodayAttendanceId(null);
       
-      // Notify other components about the attendance update using eventService
-      const userData = JSON.parse(localStorage.getItem('user'));
-      const today = new Date().toISOString().split('T')[0];
-      eventService.attendanceUpdated(userData.id, today, 'undone');
+      // Force sync with backend to ensure data is persisted
+      await forceSync();
       
       // Refresh attendance data
       await fetchAttendance();
@@ -260,34 +281,9 @@ const AttendancePage = () => {
     fetchAttendance();
   }, [fetchAttendance, navigate]);
   
-  // Listen for events from eventService
-  useEffect(() => {
-    const unsubscribe = eventService.listen((eventType, data) => {
-      const userData = JSON.parse(localStorage.getItem('user'));
-      if (!userData) return;
-      
-      if (eventType === 'backend_reset_detected') {
-        setMessage('Backend reset detected. Using locally stored data.');
-        fetchAttendance();
-      }
-      
-      if (eventType === 'attendance_updated' && data.userId === userData.id) {
-        console.log(`📣 AttendancePage received event: ${eventType}`);
-        fetchAttendance();
-      }
-    });
-    
-    return () => unsubscribe();
-  }, [fetchAttendance]);
+  // No event-based refresh - user will manually sync when needed
   
-  // Auto-refresh attendance data every 30 seconds
-  useEffect(() => {
-    const interval = setInterval(() => {
-      fetchAttendance();
-    }, 30000); // 30 seconds
-    
-    return () => clearInterval(interval);
-  }, [fetchAttendance]);
+  // No auto-refresh - user will manually sync when needed
 
   // Generate calendar data for the selected month
   const generateCalendarData = () => {
@@ -356,6 +352,14 @@ const AttendancePage = () => {
               My Attendance
         </Typography>
             <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+              <Button
+                variant="outlined"
+                color="secondary"
+                startIcon={<RefreshIcon />}
+                onClick={forceSync}
+              >
+                Sync Data
+              </Button>
               <Button
                 variant="outlined"
                 startIcon={<DownloadIcon />}

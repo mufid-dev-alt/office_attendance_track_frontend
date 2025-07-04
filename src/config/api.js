@@ -20,11 +20,13 @@ export const API_ENDPOINTS = {
         logout: `${API_BASE_URL}/api/logout`
     },
     attendance: {
+        base: `${API_BASE_URL}/api/attendance`,
         create: `${API_BASE_URL}/api/attendance`,
         list: `${API_BASE_URL}/api/attendance`,
         stats: `${API_BASE_URL}/api/attendance/stats`,
         update: (attendanceId) => `${API_BASE_URL}/api/attendance/${attendanceId}`,
-        delete: (attendanceId) => `${API_BASE_URL}/api/attendance/${attendanceId}`
+        delete: (attendanceId) => `${API_BASE_URL}/api/attendance/${attendanceId}`,
+        forceSync: `${API_BASE_URL}/api/attendance/force-sync`
     },
     users: {
         base: `${API_BASE_URL}/api/users`,
