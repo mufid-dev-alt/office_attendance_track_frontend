@@ -483,6 +483,10 @@ const AdminDashboard = () => {
         fetchUsers();
         fetchUserStats();
       }
+      if (e.key === 'attendanceUpdate') {
+        // Refresh stats when attendance is updated
+        fetchUserStats();
+      }
     };
 
     window.addEventListener('storage', handleStorageChange);

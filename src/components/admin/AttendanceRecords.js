@@ -118,6 +118,16 @@ const AttendanceRecords = () => {
 
       if (response.ok) {
         showNotification(`Attendance marked as ${status} for ${date}`, 'success');
+        
+        // Notify other components about the attendance update
+        localStorage.setItem('attendanceUpdate', JSON.stringify({
+          type: 'attendance_updated_by_admin',
+          timestamp: new Date().toISOString(),
+          userId: selectedUser.id,
+          status: status,
+          date: date
+        }));
+        
         fetchUserAttendance();
         setEditDialog({ open: false, date: null, status: 'present' });
       } else {
@@ -240,11 +250,17 @@ const AttendanceRecords = () => {
       if (e.key === 'userUpdate') {
         fetchUsers();
       }
+      if (e.key === 'attendanceUpdate') {
+        // Refresh attendance data when attendance is updated
+        if (selectedUser) {
+          fetchUserAttendance();
+        }
+      }
     };
 
     window.addEventListener('storage', handleStorageChange);
     return () => window.removeEventListener('storage', handleStorageChange);
-  }, [fetchUsers]);
+  }, [fetchUsers, fetchUserAttendance, selectedUser]);
 
   useEffect(() => {
     if (selectedUser) {

@@ -480,6 +480,16 @@ const UserDashboard = () => {
     };
 
     fetchStats();
+    
+    // Listen for attendance updates from other components
+    const handleStorageChange = (e) => {
+      if (e.key === 'attendanceUpdate') {
+        fetchStats();
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
   }, [navigate, selectedMonth, selectedYear]);
 
   if (loading) {

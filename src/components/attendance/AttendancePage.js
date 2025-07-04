@@ -126,6 +126,16 @@ const AttendancePage = () => {
       setMessage(`Attendance marked as ${status} successfully!`);
       setTodayMarked(true);
       setTodayAttendanceId(data.id); // Set the ID for undo functionality
+      
+      // Notify other components about the attendance update
+      localStorage.setItem('attendanceUpdate', JSON.stringify({
+        type: 'attendance_marked',
+        timestamp: new Date().toISOString(),
+        userId: userData.id,
+        status: status,
+        date: today
+      }));
+      
       // Refresh attendance data
       await fetchAttendance();
     } catch (error) {
@@ -158,6 +168,16 @@ const AttendancePage = () => {
       setMessage('Today\'s attendance has been undone');
       setTodayMarked(false);
       setTodayAttendanceId(null);
+      
+      // Notify other components about the attendance update
+      const userData = JSON.parse(localStorage.getItem('user'));
+      localStorage.setItem('attendanceUpdate', JSON.stringify({
+        type: 'attendance_undone',
+        timestamp: new Date().toISOString(),
+        userId: userData.id,
+        date: new Date().toISOString().split('T')[0]
+      }));
+      
       // Refresh attendance data
       await fetchAttendance();
     } catch (error) {
