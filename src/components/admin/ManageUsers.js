@@ -292,6 +292,21 @@ const ManageUsers = () => {
             </Button>
           </Box>
 
+          {/* Vercel Notice */}
+          <Paper sx={{ p: 3, mb: 3, backgroundColor: '#e3f2fd', border: '1px solid #2196f3' }}>
+            <Typography variant="h6" sx={{ mb: 2, fontWeight: 600, color: '#1976d2', display: 'flex', alignItems: 'center', gap: 1 }}>
+              ℹ️ Demo Environment Notice
+            </Typography>
+            <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
+              <strong>Important:</strong> This application is running on Vercel's serverless platform for demonstration purposes. 
+              New users will persist during your current session but may reset when the serverless function restarts. 
+              For production use, a persistent database solution (PostgreSQL, MongoDB, etc.) would be implemented.
+            </Typography>
+            <Typography variant="body2" color="textSecondary">
+              <strong>Current session features:</strong> ✅ Add users ✅ Delete users ✅ Undo functionality ✅ Real-time updates
+            </Typography>
+          </Paper>
+
           {/* Recently Deleted Users */}
           {recentlyDeleted.length > 0 && (
             <Paper sx={{ p: 3, mb: 3, backgroundColor: '#fff3e0', border: '1px solid #ffb74d' }}>
