@@ -164,30 +164,20 @@ const ManageUsers = () => {
       return;
     }
 
-    const requestData = {
-      id: userId,
-      email: formData.email,
-      password: formData.password,
-      full_name: formData.full_name,
-      role: 'user'
-    };
-
-    console.log('Creating user with data:', requestData);
-    console.log('API endpoint:', API_ENDPOINTS.users.create);
-
     try {
       const response = await fetch(API_ENDPOINTS.users.create, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(requestData)
+        body: JSON.stringify({
+          id: userId,
+          email: formData.email,
+          password: formData.password,
+          full_name: formData.full_name,
+          role: 'user'
+        })
       });
 
-      console.log('Response status:', response.status);
-      console.log('Response headers:', response.headers);
-
       if (response.ok) {
-        const result = await response.json();
-        console.log('Success result:', result);
         showNotification('User added successfully', 'success');
         setDialogOpen(false);
         setFormData({
@@ -198,19 +188,10 @@ const ManageUsers = () => {
         });
         fetchUsers();
       } else {
-        const errorText = await response.text();
-        console.log('Error response:', errorText);
-        let errorMessage = 'Failed to add user';
-        try {
-          const errorData = JSON.parse(errorText);
-          errorMessage = errorData.detail || errorMessage;
-        } catch (e) {
-          errorMessage = errorText || errorMessage;
-        }
-        throw new Error(errorMessage);
+        const error = await response.json();
+        throw new Error(error.detail || 'Failed to add user');
       }
     } catch (error) {
-      console.error('Request error:', error);
       showNotification(error.message || 'Error adding user', 'error');
     }
   };
