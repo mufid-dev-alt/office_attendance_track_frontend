@@ -19,15 +19,18 @@ import {
   Snackbar,
   Alert,
   CircularProgress,
-  Divider
+  Divider,
+  Chip
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import DateRangeIcon from '@mui/icons-material/DateRange';
+import RefreshIcon from '@mui/icons-material/Refresh';
 import { useNavigate } from 'react-router-dom';
 import Header from '../common/Header';
 import { API_ENDPOINTS } from '../../config/api';
+import eventService from '../../config/eventService';
 
 const TodoPage = () => {
   const theme = useTheme();
@@ -211,6 +214,37 @@ const TodoPage = () => {
     }
     fetchTodos();
   }, [fetchTodos, navigate]);
+  
+  // Listen for events from eventService
+  useEffect(() => {
+    const unsubscribe = eventService.listen((eventType, data) => {
+      const userData = JSON.parse(localStorage.getItem('user'));
+      if (!userData) return;
+      
+      if (eventType === 'backend_reset_detected') {
+        showNotification('Backend reset detected. Using locally stored data.', 'warning');
+        fetchTodos();
+      }
+      
+      if (eventType === 'todo_added' || eventType === 'todo_updated' || eventType === 'todo_deleted') {
+        if (data.userId === userData.id) {
+          console.log(`📣 TodoPage received event: ${eventType}`);
+          fetchTodos();
+        }
+      }
+    });
+    
+    return () => unsubscribe();
+  }, [fetchTodos, showNotification]);
+  
+  // Auto-refresh todos every 30 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchTodos();
+    }, 30000); // 30 seconds
+    
+    return () => clearInterval(interval);
+  }, [fetchTodos]);
 
   return (
     <>

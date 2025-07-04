@@ -24,7 +24,12 @@ import {
   useTheme,
   Chip,
   Avatar,
-  Divider
+  Divider,
+  List,
+  ListItem,
+  ListItemText,
+  ListItemIcon,
+  InputAdornment
 } from '@mui/material';
 import {
   Download as DownloadIcon,
@@ -34,16 +39,24 @@ import {
   CalendarToday as CalendarIcon,
   CheckCircle as PresentIcon,
   Cancel as AbsentIcon,
-  Edit as EditIcon
+  Edit as EditIcon,
+  ChevronLeft as ChevronLeftIcon,
+  ChevronRight as ChevronRightIcon,
+  Search as SearchIcon,
+  EventBusy as OffIcon,
+  Refresh as RefreshIcon
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import Header from '../common/Header';
-import { API_ENDPOINTS } from '../../config/api';
+import API_ENDPOINTS from '../../config/api';
+import userService from '../../config/userService';
+import eventService from '../../config/eventService';
 
 const AttendanceRecords = () => {
   const theme = useTheme();
   const navigate = useNavigate();
   const [users, setUsers] = useState([]);
+  const [filteredUsers, setFilteredUsers] = useState([]);
   const [selectedUser, setSelectedUser] = useState(null);
   const [attendanceData, setAttendanceData] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -57,7 +70,6 @@ const AttendanceRecords = () => {
     severity: 'success'
   });
   const [searchQuery, setSearchQuery] = useState('');
-  const [filteredUsers, setFilteredUsers] = useState([]);
 
   const months = [
     'January', 'February', 'March', 'April', 'May', 'June',
@@ -68,18 +80,21 @@ const AttendanceRecords = () => {
     setNotification({ open: true, message, severity });
   }, []);
 
+  // Fetch users using the centralized user service
   const fetchUsers = useCallback(async () => {
     try {
-      const response = await fetch(API_ENDPOINTS.users.list);
-      if (response.ok) {
-        const data = await response.json();
-        setUsers(data.filter(user => user.role !== 'admin'));
-        setFilteredUsers(data.filter(user => user.role !== 'admin'));
-      }
+      const usersList = await userService.getUsers();
+      const nonAdminUsers = usersList.filter(user => user.role !== 'admin');
+      setUsers(nonAdminUsers);
+      setFilteredUsers(nonAdminUsers.filter(user => 
+        user.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        user.email.toLowerCase().includes(searchQuery.toLowerCase())
+      ));
     } catch (error) {
+      console.error('Error fetching users:', error);
       showNotification('Error fetching users', 'error');
     }
-  }, [showNotification]);
+  }, [showNotification, searchQuery]);
 
   const fetchUserAttendance = useCallback(async () => {
     if (!selectedUser) return;
@@ -119,14 +134,8 @@ const AttendanceRecords = () => {
       if (response.ok) {
         showNotification(`Attendance marked as ${status} for ${date}`, 'success');
         
-        // Notify other components about the attendance update
-        localStorage.setItem('attendanceUpdate', JSON.stringify({
-          type: 'attendance_updated_by_admin',
-          timestamp: new Date().toISOString(),
-          userId: selectedUser.id,
-          status: status,
-          date: date
-        }));
+        // Notify other components about the attendance update using eventService
+        eventService.attendanceUpdated(selectedUser.id, date, status);
         
         fetchUserAttendance();
         setEditDialog({ open: false, date: null, status: 'present' });
@@ -226,6 +235,7 @@ const AttendanceRecords = () => {
     }
   };
 
+  // Initialize component and check auth
   useEffect(() => {
     const userData = JSON.parse(localStorage.getItem('user'));
     if (!userData || userData.role !== 'admin') {
@@ -244,29 +254,47 @@ const AttendanceRecords = () => {
     return () => clearInterval(interval);
   }, [fetchUsers]);
 
-  // Listen for user updates from other admin components
+  // Listen for user updates from user service
   useEffect(() => {
-    const handleStorageChange = (e) => {
-      if (e.key === 'userUpdate') {
-        fetchUsers();
+    const unsubscribe = userService.subscribe((eventType, data, updatedUsers) => {
+      if (['user_added', 'user_deleted', 'user_restored', 'sync_complete', 'init_complete'].includes(eventType)) {
+        const nonAdminUsers = updatedUsers.filter(user => user.role !== 'admin');
+        setUsers(nonAdminUsers);
+        setFilteredUsers(nonAdminUsers.filter(user => 
+          user.full_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          user.email.toLowerCase().includes(searchQuery.toLowerCase())
+        ));
       }
-      if (e.key === 'attendanceUpdate') {
-        // Refresh attendance data when attendance is updated
-        if (selectedUser) {
-          fetchUserAttendance();
+    });
+    
+    return () => unsubscribe();
+  }, [searchQuery]);
+
+  // Listen for events from eventService
+  useEffect(() => {
+    const unsubscribe = eventService.listen((eventType, data) => {
+      if (['user_added', 'user_deleted', 'user_restored', 'users_synced', 'backend_reset_detected'].includes(eventType)) {
+        console.log(`📣 AttendanceRecords received event: ${eventType}`);
+        fetchUsers();
+        
+        if (eventType === 'backend_reset_detected') {
+          showNotification('Backend reset detected. Using locally stored user data.', 'warning');
         }
       }
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
-  }, [fetchUsers, fetchUserAttendance, selectedUser]);
+      
+      if (eventType === 'attendance_updated' && selectedUser && data.userId === selectedUser.id) {
+        fetchUserAttendance();
+      }
+    });
+    
+    return () => unsubscribe();
+  }, [fetchUsers, fetchUserAttendance, selectedUser, showNotification]);
 
   useEffect(() => {
     if (selectedUser) {
       fetchUserAttendance();
     }
-  }, [fetchUserAttendance]);
+  }, [fetchUserAttendance, selectedUser]);
 
   useEffect(() => {
     const filtered = users.filter(user => 
@@ -275,6 +303,27 @@ const AttendanceRecords = () => {
     );
     setFilteredUsers(filtered);
   }, [users, searchQuery]);
+
+  const handleCloseNotification = () => {
+    setNotification(prev => ({ ...prev, open: false }));
+  };
+
+  const handleEditAttendance = (date) => {
+    const record = attendanceData.find(r => r.date === date);
+    setEditDialog({ 
+      open: true, 
+      date, 
+      status: record?.status || 'present' 
+    });
+  };
+
+  const handleStatusChange = (event) => {
+    setEditDialog(prev => ({ ...prev, status: event.target.value }));
+  };
+
+  const handleSaveAttendance = () => {
+    updateAttendance(editDialog.date, editDialog.status);
+  };
 
   const calendarData = selectedUser ? generateCalendarData() : [];
   const presentDays = calendarData.filter(day => day.status === 'present').length;
@@ -311,11 +360,12 @@ const AttendanceRecords = () => {
                   variant="outlined"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  sx={{
-                    '& .MuiOutlinedInput-root': {
-                      borderRadius: 3,
-                      fontSize: '1.1rem'
-                    }
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <SearchIcon />
+                      </InputAdornment>
+                    ),
                   }}
                 />
               </Box>
@@ -325,62 +375,36 @@ const AttendanceRecords = () => {
                 <Typography variant="h6" sx={{ mb: 3, fontWeight: 600, textAlign: 'left' }}>
                   Users
                 </Typography>
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                <List>
+                  {filteredUsers.length === 0 && (
+                    <ListItem>
+                      <ListItemText primary="No users found" />
+                    </ListItem>
+                  )}
                   {filteredUsers.map((user) => (
-                    <Box
+                    <ListItem 
                       key={user.id}
+                      button 
+                      onClick={() => setSelectedUser(user)}
                       sx={{ 
-                        display: 'flex',
-                        alignItems: 'center',
-                        p: 2,
-                        borderRadius: 2,
+                        mb: 1, 
+                        borderRadius: 1,
                         border: '1px solid',
                         borderColor: theme.palette.divider,
-                        cursor: 'pointer',
-                        transition: 'all 0.2s ease',
-                        bgcolor: theme.palette.background.paper,
                         '&:hover': {
-                          borderColor: theme.palette.primary.main,
-                          bgcolor: theme.palette.primary.light + '08',
-                          transform: 'translateX(4px)'
+                          backgroundColor: theme.palette.primary.light,
+                          color: 'white'
                         }
                       }}
-                      onClick={() => setSelectedUser(user)}
                     >
-                      <Avatar 
-                        sx={{ 
-                          mr: 2, 
-                          bgcolor: theme.palette.primary.main, 
-                          width: 40, 
-                          height: 40,
-                          fontSize: '1rem',
-                          fontWeight: 600
-                        }}
-                      >
-                        {user.full_name.charAt(0)}
-                      </Avatar>
-                      <Box sx={{ flex: 1 }}>
-                        <Typography variant="body1" sx={{ fontWeight: 600, mb: 0.5 }}>
-                          {user.full_name}
-                        </Typography>
-                        <Typography variant="body2" color="textSecondary" sx={{ 
-                          fontSize: { xs: '0.75rem', sm: '0.875rem' },
-                          wordBreak: 'break-word'
-                        }}>
-                          {user.email}
-                        </Typography>
-                      </Box>
-                    </Box>
+                      <ListItemText 
+                        primary={user.full_name} 
+                        secondary={user.email}
+                        primaryTypographyProps={{ fontWeight: 600 }}
+                      />
+                    </ListItem>
                   ))}
-                </Box>
-                
-                {filteredUsers.length === 0 && (
-                  <Box sx={{ textAlign: 'center', py: 4 }}>
-                    <Typography variant="body1" color="textSecondary">
-                      No users found matching your search
-                    </Typography>
-                  </Box>
-                )}
+                </List>
               </Box>
             </Paper>
           ) : (
@@ -428,7 +452,7 @@ const AttendanceRecords = () => {
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                     <IconButton onClick={() => navigateMonth('prev')}>
-                      <ArrowBackIcon />
+                      <ChevronLeftIcon />
                     </IconButton>
                     
                     <Typography variant="h6" sx={{ fontWeight: 600, minWidth: 200, textAlign: 'center' }}>
@@ -436,7 +460,7 @@ const AttendanceRecords = () => {
                     </Typography>
                     
                     <IconButton onClick={() => navigateMonth('next')}>
-                      <ArrowForwardIcon />
+                      <ChevronRightIcon />
                     </IconButton>
                   </Box>
 
@@ -521,11 +545,7 @@ const AttendanceRecords = () => {
                               }}
                               onClick={() => {
                                 if (!dayData.isWeekend) {
-                                  setEditDialog({
-                                    open: true,
-                                    date: dayData.date,
-                                    status: dayData.status || 'present'
-                                  });
+                                  handleEditAttendance(dayData.date);
                                 }
                               }}
                             >
@@ -583,42 +603,36 @@ const AttendanceRecords = () => {
         </Container>
 
         {/* Edit Attendance Dialog */}
-        <Dialog open={editDialog.open} onClose={() => setEditDialog({ open: false, date: null, status: 'present' })}>
-          <DialogTitle>
-            Mark Attendance for {editDialog.date ? new Date(editDialog.date).toLocaleDateString() : ''}
-          </DialogTitle>
+        <Dialog open={editDialog.open} onClose={() => setEditDialog({ ...editDialog, open: false })}>
+          <DialogTitle>Edit Attendance</DialogTitle>
           <DialogContent>
-            <FormControl fullWidth sx={{ mt: 2 }}>
-              <InputLabel>Attendance Status</InputLabel>
-              <Select
-                value={editDialog.status}
-                label="Attendance Status"
-                onChange={(e) => setEditDialog({ ...editDialog, status: e.target.value })}
-              >
-                <MenuItem value="present">Present</MenuItem>
-                <MenuItem value="absent">Absent</MenuItem>
-              </Select>
-            </FormControl>
+            <Typography variant="body1" sx={{ mb: 2 }}>
+              Date: {editDialog.date ? new Date(editDialog.date).toLocaleDateString() : ''}
+            </Typography>
+            <Select
+              value={editDialog.status}
+              onChange={handleStatusChange}
+              fullWidth
+            >
+              <MenuItem value="present">Present</MenuItem>
+              <MenuItem value="absent">Absent</MenuItem>
+              <MenuItem value="off">Day Off</MenuItem>
+            </Select>
           </DialogContent>
           <DialogActions>
-            <Button onClick={() => setEditDialog({ open: false, date: null, status: 'present' })}>
-              Cancel
-            </Button>
-            <Button
-              onClick={() => updateAttendance(editDialog.date, editDialog.status)}
-              variant="contained"
-            >
-              Save
-            </Button>
+            <Button onClick={() => setEditDialog({ ...editDialog, open: false })}>Cancel</Button>
+            <Button onClick={handleSaveAttendance} variant="contained">Save</Button>
           </DialogActions>
         </Dialog>
 
+        {/* Notification */}
         <Snackbar
           open={notification.open}
           autoHideDuration={6000}
-          onClose={() => setNotification({ ...notification, open: false })}
+          onClose={handleCloseNotification}
+          anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
         >
-          <Alert severity={notification.severity} onClose={() => setNotification({ ...notification, open: false })}>
+          <Alert onClose={handleCloseNotification} severity={notification.severity} sx={{ width: '100%' }}>
             {notification.message}
           </Alert>
         </Snackbar>

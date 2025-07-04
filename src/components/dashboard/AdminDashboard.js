@@ -38,11 +38,14 @@ import {
   EventNote as EventNoteIcon,
   ListAlt as ListAltIcon,
   People as PeopleIcon,
-  ExitToApp as LogoutIcon
+  ExitToApp as LogoutIcon,
+  Warning as WarningIcon
 } from '@mui/icons-material';
 import { useNavigate, Link } from 'react-router-dom';
 import Header from '../common/Header';
 import { API_ENDPOINTS } from '../../config/api';
+import userService from '../../config/userService';
+import eventService from '../../config/eventService';
 
 // Admin Header Component
 const AdminHeader = ({ onMenuClick }) => {
@@ -476,22 +479,26 @@ const AdminDashboard = () => {
     return () => clearInterval(interval);
   }, [fetchUsers]);
 
-  // Listen for user updates from other admin components
+  // Listen for events from eventService
   useEffect(() => {
-    const handleStorageChange = (e) => {
-      if (e.key === 'userUpdate') {
+    const unsubscribe = eventService.listen((eventType, data) => {
+      if (['user_added', 'user_deleted', 'user_restored', 'users_synced', 'backend_reset_detected'].includes(eventType)) {
+        console.log(`📣 AdminDashboard received event: ${eventType}`);
         fetchUsers();
-        fetchUserStats();
+        
+        if (eventType === 'backend_reset_detected') {
+          showNotification('Backend reset detected. Using locally stored user data.', 'warning');
+        }
       }
-      if (e.key === 'attendanceUpdate') {
+      
+      if (eventType === 'attendance_updated') {
         // Refresh stats when attendance is updated
         fetchUserStats();
       }
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
-  }, [fetchUsers, fetchUserStats]);
+    });
+    
+    return () => unsubscribe();
+  }, [fetchUsers, fetchUserStats, showNotification]);
 
   return (
     <Box sx={{ display: 'flex' }}>
@@ -511,15 +518,35 @@ const AdminDashboard = () => {
       >
         <Container maxWidth="xl">
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4, flexWrap: 'wrap', gap: 2 }}>
-            <Typography 
-              variant="h4" 
-              sx={{ 
-                fontWeight: 600,
-                color: theme.palette.text.primary
-              }}
-            >
-              Admin Dashboard
-            </Typography>
+            <Box>
+              <Typography 
+                variant="h4" 
+                sx={{ 
+                  fontWeight: 600,
+                  color: theme.palette.text.primary
+                }}
+              >
+                Admin Dashboard
+              </Typography>
+              
+              <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
+                <Chip 
+                  label="Client-side persistence enabled" 
+                  color="primary" 
+                  variant="outlined"
+                  size="small"
+                />
+                {userService.isBackendResetDetected() && (
+                  <Chip 
+                    label="Backend reset detected" 
+                    color="warning" 
+                    variant="outlined"
+                    size="small"
+                    icon={<WarningIcon />}
+                  />
+                )}
+              </Box>
+            </Box>
             
             <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
               <FormControl size="small" sx={{ minWidth: 120 }}>

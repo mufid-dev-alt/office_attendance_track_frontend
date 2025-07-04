@@ -15,18 +15,21 @@ import {
   Select,
   MenuItem,
   Chip,
-  useTheme
+  useTheme,
+  IconButton
 } from '@mui/material';
 import {
   CheckCircle as PresentIcon,
   Cancel as AbsentIcon,
   CalendarToday as CalendarIcon,
   Download as DownloadIcon,
-  Undo as UndoIcon
+  Undo as UndoIcon,
+  Refresh as RefreshIcon
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import Header from '../common/Header';
 import { API_ENDPOINTS } from '../../config/api';
+import eventService from '../../config/eventService';
 
 const AttendancePage = () => {
   const theme = useTheme();
@@ -127,14 +130,8 @@ const AttendancePage = () => {
       setTodayMarked(true);
       setTodayAttendanceId(data.id); // Set the ID for undo functionality
       
-      // Notify other components about the attendance update
-      localStorage.setItem('attendanceUpdate', JSON.stringify({
-        type: 'attendance_marked',
-        timestamp: new Date().toISOString(),
-        userId: userData.id,
-        status: status,
-        date: today
-      }));
+      // Notify other components about the attendance update using eventService
+      eventService.attendanceUpdated(userData.id, today, status);
       
       // Refresh attendance data
       await fetchAttendance();
@@ -169,14 +166,10 @@ const AttendancePage = () => {
       setTodayMarked(false);
       setTodayAttendanceId(null);
       
-      // Notify other components about the attendance update
+      // Notify other components about the attendance update using eventService
       const userData = JSON.parse(localStorage.getItem('user'));
-      localStorage.setItem('attendanceUpdate', JSON.stringify({
-        type: 'attendance_undone',
-        timestamp: new Date().toISOString(),
-        userId: userData.id,
-        date: new Date().toISOString().split('T')[0]
-      }));
+      const today = new Date().toISOString().split('T')[0];
+      eventService.attendanceUpdated(userData.id, today, 'undone');
       
       // Refresh attendance data
       await fetchAttendance();
@@ -266,6 +259,35 @@ const AttendancePage = () => {
     }
     fetchAttendance();
   }, [fetchAttendance, navigate]);
+  
+  // Listen for events from eventService
+  useEffect(() => {
+    const unsubscribe = eventService.listen((eventType, data) => {
+      const userData = JSON.parse(localStorage.getItem('user'));
+      if (!userData) return;
+      
+      if (eventType === 'backend_reset_detected') {
+        setMessage('Backend reset detected. Using locally stored data.');
+        fetchAttendance();
+      }
+      
+      if (eventType === 'attendance_updated' && data.userId === userData.id) {
+        console.log(`📣 AttendancePage received event: ${eventType}`);
+        fetchAttendance();
+      }
+    });
+    
+    return () => unsubscribe();
+  }, [fetchAttendance]);
+  
+  // Auto-refresh attendance data every 30 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchAttendance();
+    }, 30000); // 30 seconds
+    
+    return () => clearInterval(interval);
+  }, [fetchAttendance]);
 
   // Generate calendar data for the selected month
   const generateCalendarData = () => {

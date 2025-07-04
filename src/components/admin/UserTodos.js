@@ -22,7 +22,8 @@ import {
   List,
   ListItem,
   ListItemText,
-  ListItemSecondaryAction
+  ListItemSecondaryAction,
+  Chip
 } from '@mui/material';
 import {
   Edit as EditIcon,
@@ -30,11 +31,14 @@ import {
   Add as AddIcon,
   Person as PersonIcon,
   Assignment as TodoIcon,
-  DateRange as DateIcon
+  DateRange as DateIcon,
+  Refresh as RefreshIcon
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import Header from '../common/Header';
 import { API_ENDPOINTS } from '../../config/api';
+import userService from '../../config/userService';
+import eventService from '../../config/eventService';
 
 const UserTodos = () => {
   const theme = useTheme();
@@ -138,7 +142,10 @@ const UserTodos = () => {
         });
 
         if (response.ok) {
+          const newTodo = await response.json();
           showNotification('Todo added successfully', 'success');
+          // Notify other components
+          eventService.todoAdded(selectedUser.id, newTodo);
         } else {
           throw new Error('Failed to add todo');
         }
@@ -150,7 +157,10 @@ const UserTodos = () => {
         });
 
         if (response.ok) {
+          const updatedTodo = await response.json();
           showNotification('Todo updated successfully', 'success');
+          // Notify other components
+          eventService.todoUpdated(selectedUser.id, updatedTodo);
         } else {
           throw new Error('Failed to update todo');
         }
@@ -174,6 +184,8 @@ const UserTodos = () => {
 
       if (response.ok) {
         showNotification('Todo deleted successfully', 'success');
+        // Notify other components
+        eventService.todoDeleted(selectedUser.id, todoId);
         fetchUserTodos();
       } else {
         throw new Error('Failed to delete todo');
@@ -201,17 +213,27 @@ const UserTodos = () => {
     return () => clearInterval(interval);
   }, [fetchUsers]);
 
-  // Listen for user updates from other admin components
+  // Listen for events from eventService
   useEffect(() => {
-    const handleStorageChange = (e) => {
-      if (e.key === 'userUpdate') {
+    const unsubscribe = eventService.listen((eventType, data) => {
+      if (['user_added', 'user_deleted', 'user_restored', 'users_synced', 'backend_reset_detected'].includes(eventType)) {
+        console.log(`📣 UserTodos received event: ${eventType}`);
         fetchUsers();
+        
+        if (eventType === 'backend_reset_detected') {
+          showNotification('Backend reset detected. Using locally stored user data.', 'warning');
+        }
       }
-    };
-
-    window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
-  }, [fetchUsers]);
+      
+      if (eventType === 'todo_added' || eventType === 'todo_updated' || eventType === 'todo_deleted') {
+        if (selectedUser && data.userId === selectedUser.id) {
+          fetchUserTodos();
+        }
+      }
+    });
+    
+    return () => unsubscribe();
+  }, [fetchUsers, fetchUserTodos, selectedUser, showNotification]);
 
   useEffect(() => {
     if (selectedUser) {
