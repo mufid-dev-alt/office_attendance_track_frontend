@@ -470,35 +470,7 @@ const AdminDashboard = () => {
     fetchUserStats();
   };
 
-  // Auto-refresh data every 30 seconds to catch updates from other admin sessions
-  useEffect(() => {
-    const interval = setInterval(() => {
-      fetchUsers();
-    }, 30000); // 30 seconds
-
-    return () => clearInterval(interval);
-  }, [fetchUsers]);
-
-  // Listen for events from eventService
-  useEffect(() => {
-    const unsubscribe = eventService.listen((eventType, data) => {
-      if (['user_added', 'user_deleted', 'user_restored', 'users_synced', 'backend_reset_detected'].includes(eventType)) {
-        console.log(`📣 AdminDashboard received event: ${eventType}`);
-        fetchUsers();
-        
-        if (eventType === 'backend_reset_detected') {
-          showNotification('Backend reset detected. Using locally stored user data.', 'warning');
-        }
-      }
-      
-      if (eventType === 'attendance_updated') {
-        // Refresh stats when attendance is updated
-        fetchUserStats();
-      }
-    });
-    
-    return () => unsubscribe();
-  }, [fetchUsers, fetchUserStats, showNotification]);
+  // No auto-refresh or event-based refresh
 
   return (
     <Box sx={{ display: 'flex' }}>
@@ -518,35 +490,15 @@ const AdminDashboard = () => {
       >
         <Container maxWidth="xl">
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4, flexWrap: 'wrap', gap: 2 }}>
-            <Box>
-              <Typography 
-                variant="h4" 
-                sx={{ 
-                  fontWeight: 600,
-                  color: theme.palette.text.primary
-                }}
-              >
-                Admin Dashboard
-              </Typography>
-              
-              <Box sx={{ display: 'flex', gap: 1, mt: 1 }}>
-                <Chip 
-                  label="Client-side persistence enabled" 
-                  color="primary" 
-                  variant="outlined"
-                  size="small"
-                />
-                {userService.isBackendResetDetected() && (
-                  <Chip 
-                    label="Backend reset detected" 
-                    color="warning" 
-                    variant="outlined"
-                    size="small"
-                    icon={<WarningIcon />}
-                  />
-                )}
-              </Box>
-            </Box>
+            <Typography 
+              variant="h4" 
+              sx={{ 
+                fontWeight: 600,
+                color: theme.palette.text.primary
+              }}
+            >
+              Admin Dashboard
+            </Typography>
             
             <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
               <FormControl size="small" sx={{ minWidth: 120 }}>

@@ -27,12 +27,14 @@ export const API_ENDPOINTS = {
         delete: (attendanceId) => `${API_BASE_URL}/api/attendance/${attendanceId}`
     },
     users: {
+        base: `${API_BASE_URL}/api/users`,
         list: `${API_BASE_URL}/api/users`,
         get: (id) => `${API_BASE_URL}/api/users/${id}`,
         create: `${API_BASE_URL}/api/users`,
         update: (userId) => `${API_BASE_URL}/api/users/${userId}`,
         delete: (userId) => `${API_BASE_URL}/api/users/${userId}`,
-        undo: (userId) => `${API_BASE_URL}/api/users/${userId}/undo`
+        undo: (userId) => `${API_BASE_URL}/api/users/${userId}/undo`,
+        permanentDelete: (userId) => `${API_BASE_URL}/api/users/${userId}/permanent-delete`
     },
     todos: {
         create: `${API_BASE_URL}/api/todos`,

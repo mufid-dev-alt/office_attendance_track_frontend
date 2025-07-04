@@ -208,6 +208,27 @@ class UserService {
       throw error;
     }
   }
+  
+  // Permanently delete a user
+  async permanentlyDeleteUser(userId) {
+    try {
+      const response = await fetch(`${API_ENDPOINTS.users.base}/${userId}/permanent-delete`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        this.notifyListeners('user_permanently_deleted', { id: userId });
+        return result;
+      } else {
+        throw new Error('Failed to permanently delete user');
+      }
+    } catch (error) {
+      console.error('Error permanently deleting user:', error);
+      throw error;
+    }
+  }
 
   // Subscribe to user changes
   subscribe(callback) {

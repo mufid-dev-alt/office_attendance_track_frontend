@@ -213,27 +213,7 @@ const UserTodos = () => {
     return () => clearInterval(interval);
   }, [fetchUsers]);
 
-  // Listen for events from eventService
-  useEffect(() => {
-    const unsubscribe = eventService.listen((eventType, data) => {
-      if (['user_added', 'user_deleted', 'user_restored', 'users_synced', 'backend_reset_detected'].includes(eventType)) {
-        console.log(`📣 UserTodos received event: ${eventType}`);
-        fetchUsers();
-        
-        if (eventType === 'backend_reset_detected') {
-          showNotification('Backend reset detected. Using locally stored user data.', 'warning');
-        }
-      }
-      
-      if (eventType === 'todo_added' || eventType === 'todo_updated' || eventType === 'todo_deleted') {
-        if (selectedUser && data.userId === selectedUser.id) {
-          fetchUserTodos();
-        }
-      }
-    });
-    
-    return () => unsubscribe();
-  }, [fetchUsers, fetchUserTodos, selectedUser, showNotification]);
+  // Only fetch users on component mount and via refresh button
 
   useEffect(() => {
     if (selectedUser) {

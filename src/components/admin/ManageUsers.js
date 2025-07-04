@@ -153,6 +153,25 @@ const ManageUsers = () => {
       setServerSyncStatus('error');
     }
   };
+  
+  const handlePermanentDelete = async (userId, userName) => {
+    if (window.confirm(`Are you sure you want to permanently delete ${userName}? This action cannot be undone.`)) {
+      try {
+        setServerSyncStatus('syncing');
+        await userService.permanentlyDeleteUser(userId);
+        
+        // Remove from recently deleted list
+        setRecentlyDeleted(prev => prev.filter(item => item.id !== userId));
+        
+        showNotification(`${userName} has been permanently deleted`, 'success');
+        setServerSyncStatus('synced');
+      } catch (error) {
+        console.error('Error permanently deleting user:', error);
+        showNotification(`Error permanently deleting user: ${error.message}`, 'error');
+        setServerSyncStatus('error');
+      }
+    }
+  };
 
   const handleSubmit = async () => {
     // Validate form
@@ -236,30 +255,7 @@ const ManageUsers = () => {
     );
   }, [currentTime]);
 
-  // Listen for events from eventService
-  useEffect(() => {
-    const unsubscribe = eventService.listen((eventType, data) => {
-      if (['user_added', 'user_deleted', 'user_restored', 'users_synced', 'backend_reset_detected'].includes(eventType)) {
-        console.log(`📣 ManageUsers received event: ${eventType}`);
-        fetchUsers();
-        
-        if (eventType === 'backend_reset_detected') {
-          showNotification('Backend reset detected. Using locally stored user data.', 'warning');
-        }
-      }
-    });
-    
-    return () => unsubscribe();
-  }, [fetchUsers, showNotification]);
-
-  // Auto-refresh users every 30 seconds
-  useEffect(() => {
-    const interval = setInterval(() => {
-      fetchUsers();
-    }, 30000); // 30 seconds
-    
-    return () => clearInterval(interval);
-  }, [fetchUsers]);
+  // No event-based refresh
 
   return (
     <>
@@ -271,18 +267,6 @@ const ManageUsers = () => {
               Active Users ({users.length})
             </Typography>
             <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
-              <Chip 
-                label="Client-side persistence enabled" 
-                color="primary" 
-                variant="outlined"
-              />
-              {userService.isBackendResetDetected() && (
-                <Chip 
-                  label="Backend reset detected" 
-                  color="warning" 
-                  variant="outlined"
-                />
-              )}
               <IconButton 
                 color="primary" 
                 onClick={fetchUsers} 
@@ -371,18 +355,25 @@ const ManageUsers = () => {
                         <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
                           {item.full_name} ({item.email})
                         </Typography>
-                        <Typography variant="body2" color="textSecondary">
-                          Time remaining: <b>{remainingTime}</b>
-                        </Typography>
                       </Box>
-                      <Button
-                        variant="outlined"
-                        color="warning"
-                        startIcon={<UndoIcon />}
-                        onClick={() => handleUndo(item.id)}
-                      >
-                        Restore User
-                      </Button>
+                      <Box sx={{ display: 'flex', gap: 1 }}>
+                        <Button
+                          variant="outlined"
+                          color="warning"
+                          startIcon={<UndoIcon />}
+                          onClick={() => handleUndo(item.id)}
+                        >
+                          Restore
+                        </Button>
+                        <Button
+                          variant="outlined"
+                          color="error"
+                          startIcon={<DeleteIcon />}
+                          onClick={() => handlePermanentDelete(item.id, item.full_name)}
+                        >
+                          Delete Now
+                        </Button>
+                      </Box>
                     </Box>
                   );
                 })}
@@ -390,23 +381,7 @@ const ManageUsers = () => {
             </Paper>
           )}
 
-          <Paper sx={{ p: 3 }}>
-            <Typography variant="h6" sx={{ fontWeight: 600, mb: 2 }}>
-              Important Information
-            </Typography>
-            <Typography variant="body2" color="textSecondary" paragraph>
-              This application is running on Vercel's serverless functions, which have certain limitations:
-            </Typography>
-            <Typography variant="body2" color="textSecondary" paragraph>
-              1. Data is stored in memory and JSON files, which may reset when functions restart.
-            </Typography>
-            <Typography variant="body2" color="textSecondary" paragraph>
-              2. We've implemented client-side persistence to ensure your users remain available even after server resets.
-            </Typography>
-            <Typography variant="body2" color="textSecondary" paragraph>
-              3. For a production environment, we recommend using a database like Vercel Postgres or MongoDB Atlas.
-            </Typography>
-          </Paper>
+
         </Container>
       </Box>
 

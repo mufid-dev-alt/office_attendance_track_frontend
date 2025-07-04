@@ -270,25 +270,7 @@ const AttendanceRecords = () => {
     return () => unsubscribe();
   }, [searchQuery]);
 
-  // Listen for events from eventService
-  useEffect(() => {
-    const unsubscribe = eventService.listen((eventType, data) => {
-      if (['user_added', 'user_deleted', 'user_restored', 'users_synced', 'backend_reset_detected'].includes(eventType)) {
-        console.log(`📣 AttendanceRecords received event: ${eventType}`);
-        fetchUsers();
-        
-        if (eventType === 'backend_reset_detected') {
-          showNotification('Backend reset detected. Using locally stored user data.', 'warning');
-        }
-      }
-      
-      if (eventType === 'attendance_updated' && selectedUser && data.userId === selectedUser.id) {
-        fetchUserAttendance();
-      }
-    });
-    
-    return () => unsubscribe();
-  }, [fetchUsers, fetchUserAttendance, selectedUser, showNotification]);
+  // Only fetch users on component mount and via refresh button
 
   useEffect(() => {
     if (selectedUser) {
