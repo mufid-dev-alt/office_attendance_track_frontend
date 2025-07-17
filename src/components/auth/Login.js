@@ -75,99 +75,48 @@ const Login = () => {
       setLoading(false);
       return;
     }
-    
-    // Check if API is healthy before attempting login
-    if (!apiStatus.healthy) {
-      // Refresh API health status
-      try {
-        const health = await checkApiHealth();
-        if (!health.healthy) {
-          setError('Server is currently unavailable. Please try again later.');
-          setLoading(false);
-          return;
-        }
-        // Update API status if it's now healthy
-        setApiStatus({ ...apiStatus, healthy: true, message: null });
-      } catch (e) {
-        setError('Cannot connect to server. Please try again later.');
-        setLoading(false);
-        return;
-      }
-    }
 
     try {
-      // Use POST method instead of GET for better security
-      const response = await fetch(API_ENDPOINTS.auth.login, {
-        method: 'POST',
+      const response = await fetch(`${API_ENDPOINTS.auth.login}?email=${formData.email}&password=${formData.password}`, {
+        method: 'GET',
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
         },
-        body: JSON.stringify({
-          email: formData.email,
-          password: formData.password
-        }),
         mode: 'cors'
       });
 
-      if (!response.ok) {
-        const errorText = `Server error: ${response.status} ${response.statusText}`;
-        console.error(errorText);
-        setError('Server error. Please try again later.');
-        setLoading(false);
-        return;
-      }
+      const data = await response.json();
 
-      try {
-        const data = await response.json();
-
-        if (data && data.success && data.user) {
-          // Check if user role matches selected tab
-          if (activeTab === 'admin' && data.user.role !== 'admin') {
-            setError('Admin access required. Please use User login.');
-            setLoading(false);
-            return;
-          }
-          
-          if (activeTab === 'user' && data.user.role === 'admin') {
-            setError('Please use Admin login for administrative access.');
-            setLoading(false);
-            return;
-          }
-
-          // Store user data in localStorage
-          localStorage.setItem('user', JSON.stringify(data.user));
-          console.log(`Login successful for ${data.user.email} with role ${data.user.role}`);
-          
-          // Navigate based on role
-          if (data.user.role === 'admin') {
-            navigate('/admin');
-          } else {
-            navigate('/dashboard');
-          }
-        } else {
-          // Handle specific error messages from the server
-          const errorMessage = data.message || 'Invalid email or password';
-          setError(errorMessage);
-          console.error('Login failed:', errorMessage);
+      if (data && data.success && data.user) {
+        if (activeTab === 'admin' && data.user.role !== 'admin') {
+          setError('Admin access required. Please use User login.');
+          setLoading(false);
+          return;
         }
-      } catch (error) {
-        console.error('Error parsing response:', error);
-        setError('Login failed. Please try again.');
-      } finally {
-        setLoading(false);
+        if (activeTab === 'user' && data.user.role === 'admin') {
+          setError('Please use Admin login for administrative access.');
+          setLoading(false);
+          return;
+        }
+        localStorage.setItem('user', JSON.stringify(data.user));
+        if (data.user.role === 'admin') {
+          navigate('/admin');
+        } else {
+          navigate('/dashboard');
+        }
+      } else {
+        const errorMessage = data.message || 'Invalid email or password';
+        setError(errorMessage);
+        console.error('Login failed:', errorMessage);
       }
     } catch (error) {
-      console.error('Network error:', error);
-      setError('Network error. Please check your connection.');
+      setError('Login failed. Please try again.');
+      console.error('Network or parsing error:', error);
+    } finally {
       setLoading(false);
     }
-  } catch (error) {
-    console.error('Network error:', error);
-    setError('Network error. Please check your connection.');
-    setLoading(false);
-  }
-};
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
