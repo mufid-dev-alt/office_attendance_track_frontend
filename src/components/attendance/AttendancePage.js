@@ -101,11 +101,11 @@ const AttendancePage = () => {
       }
 
       const data = await response.json();
-      setAttendanceData(data || []);
+      setAttendanceData(Array.isArray(data) ? data : []);
       
       // Check if today's attendance is already marked
       const today = new Date().toISOString().split('T')[0];
-      const todayRecord = data.find(record => record.date === today);
+      const todayRecord = (Array.isArray(data) ? data : []).find(record => record.date === today);
       setTodayMarked(!!todayRecord);
       setTodayAttendanceId(todayRecord?.id || null);
     } catch (error) {
@@ -301,7 +301,7 @@ const AttendancePage = () => {
       const dateStr = `${selectedYear}-${String(selectedMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
       const dayOfWeek = new Date(selectedYear, selectedMonth - 1, day).getDay();
       const isWeekend = dayOfWeek === 0 || dayOfWeek === 6; // Sunday = 0, Saturday = 6
-      const attendanceRecord = attendanceData.find(record => record.date === dateStr);
+      const attendanceRecord = (Array.isArray(attendanceData) ? attendanceData : []).find(record => record.date === dateStr);
       
       calendarData.push({
         day,
