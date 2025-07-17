@@ -81,7 +81,7 @@ const TodoPage = () => {
       }
 
       const data = await response.json();
-      setTodos(Array.isArray(data) ? data : []);
+      setTodos(Array.isArray(data.todos) ? data.todos : []);
     } catch (error) {
       showNotification(error.message, 'error');
     } finally {
