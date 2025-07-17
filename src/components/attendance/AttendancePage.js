@@ -101,11 +101,11 @@ const AttendancePage = () => {
       }
 
       const data = await response.json();
-      setAttendanceData(Array.isArray(data) ? data : []);
+      setAttendanceData(Array.isArray(data.records) ? data.records : []);
       
       // Check if today's attendance is already marked
       const today = new Date().toISOString().split('T')[0];
-      const todayRecord = (Array.isArray(data) ? data : []).find(record => record.date === today);
+      const todayRecord = (Array.isArray(data.records) ? data.records : []).find(record => record.date === today);
       setTodayMarked(!!todayRecord);
       setTodayAttendanceId(todayRecord?.id || null);
     } catch (error) {
@@ -215,14 +215,15 @@ const AttendancePage = () => {
 
       if (response.ok) {
         const data = await response.json();
-        if (!data || data.length === 0) {
+        const records = Array.isArray(data.records) ? data.records : [];
+        if (records.length === 0) {
           setMessage('No attendance data found for the selected period');
           setDownloading(false);
           return;
         }
         
         // Convert to Excel-like CSV format
-        const excelContent = convertToExcelFormat(data, userData);
+        const excelContent = convertToExcelFormat(records, userData);
         const blob = new Blob([excelContent], { type: 'text/csv;charset=utf-8;' });
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
