@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Box,
   Card,
@@ -16,7 +16,7 @@ import {
   Lock as LockIcon
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
-import { API_ENDPOINTS } from '../../config/api';
+import { API_ENDPOINTS, checkApiHealth } from '../../config/api';
 
 const Login = () => {
   const navigate = useNavigate();
@@ -28,6 +28,42 @@ const Login = () => {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [apiStatus, setApiStatus] = useState({ checked: false, healthy: true, message: null });
+  
+  // Check API health when component mounts
+  useEffect(() => {
+    const checkHealth = async () => {
+      setLoading(true);
+      try {
+        const health = await checkApiHealth();
+        if (!health.healthy) {
+          setApiStatus({ 
+            checked: true, 
+            healthy: false, 
+            message: `API connection issue: ${health.error || 'Unknown error'}` 
+          });
+          if (health.database && health.database.status === 'error') {
+            setError(`Database connection issue: ${health.database.error || 'Unknown database error'}`);
+          } else {
+            setError('Server connection issue. Please try again later.');
+          }
+        } else {
+          setApiStatus({ checked: true, healthy: true, message: null });
+        }
+      } catch (e) {
+        setApiStatus({ 
+          checked: true, 
+          healthy: false, 
+          message: `Failed to check API health: ${e.message}` 
+        });
+        setError('Cannot connect to server. Please try again later.');
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    checkHealth();
+  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -39,22 +75,53 @@ const Login = () => {
       setLoading(false);
       return;
     }
-
-    const loginUrl = `${API_ENDPOINTS.auth.login}?email=${formData.email}&password=${formData.password}`;
     
+    // Check if API is healthy before attempting login
+    if (!apiStatus.healthy) {
+      // Refresh API health status
+      try {
+        const health = await checkApiHealth();
+        if (!health.healthy) {
+          setError('Server is currently unavailable. Please try again later.');
+          setLoading(false);
+          return;
+        }
+        // Update API status if it's now healthy
+        setApiStatus({ ...apiStatus, healthy: true, message: null });
+      } catch (e) {
+        setError('Cannot connect to server. Please try again later.');
+        setLoading(false);
+        return;
+      }
+    }
+
     try {
-    const response = await fetch(loginUrl, {
-      method: 'GET',
+    // Use POST method instead of GET for better security
+    const response = await fetch(API_ENDPOINTS.auth.login, {
+      method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
       },
+      body: JSON.stringify({
+        email: formData.email,
+        password: formData.password
+      }),
       mode: 'cors'
     });
 
-    const data = await response.json();
+    if (!response.ok) {
+      const errorText = `Server error: ${response.status} ${response.statusText}`;
+      console.error(errorText);
+      setError('Server error. Please try again later.');
+      setLoading(false);
+      return;
+    }
 
-    if (data && data.success && data.user) {
+    try {
+      const data = await response.json();
+
+      if (data && data.success && data.user) {
         // Check if user role matches selected tab
         if (activeTab === 'admin' && data.user.role !== 'admin') {
           setError('Admin access required. Please use User login.');
@@ -64,22 +131,28 @@ const Login = () => {
         
         if (activeTab === 'user' && data.user.role === 'admin') {
           setError('Please use Admin login for administrative access.');
-        setLoading(false);
-        return;
-      }
+          setLoading(false);
+          return;
+        }
 
-      localStorage.setItem('user', JSON.stringify(data.user));
-      
-      // Navigate based on role
-      if (data.user.role === 'admin') {
-        navigate('/admin');
+        // Store user data in localStorage
+        localStorage.setItem('user', JSON.stringify(data.user));
+        console.log(`Login successful for ${data.user.email} with role ${data.user.role}`);
+        
+        // Navigate based on role
+        if (data.user.role === 'admin') {
+          navigate('/admin');
+        } else {
+          navigate('/dashboard');
+        }
       } else {
-        navigate('/dashboard');
-      }
-      } else {
-        setError('Invalid email or password');
+        // Handle specific error messages from the server
+        const errorMessage = data.message || 'Invalid email or password';
+        setError(errorMessage);
+        console.error('Login failed:', errorMessage);
       }
     } catch (error) {
+      console.error('Error parsing response:', error);
       setError('Login failed. Please try again.');
     } finally {
       setLoading(false);
@@ -195,21 +268,69 @@ const Login = () => {
         </Box>
 
         <CardContent sx={{ p: 4 }}>
-          {error && (
-            <Paper 
-              sx={{ 
-                p: 2, 
-                mb: 3, 
-                backgroundColor: theme.palette.error.light,
-                color: theme.palette.error.contrastText,
-                borderRadius: 1
-              }}
-            >
-              <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                {error}
-              </Typography>
-            </Paper>
-          )}
+          {/* Status Messages */}
+          <Box sx={{ mb: 3 }}>
+            {error && (
+              <Paper 
+                elevation={0}
+                sx={{ 
+                  p: 2, 
+                  backgroundColor: theme.palette.error.light,
+                  color: theme.palette.error.contrastText,
+                  borderRadius: 1,
+                  border: `1px solid ${theme.palette.error.main}`
+                }}
+              >
+                <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                  {error}
+                </Typography>
+                {apiStatus.message && (
+                  <Typography variant="caption" display="block" sx={{ mt: 1 }}>
+                    Details: {apiStatus.message}
+                  </Typography>
+                )}
+              </Paper>
+            )}
+            
+            {!error && !apiStatus.healthy && (
+              <Paper 
+                elevation={0}
+                sx={{ 
+                  p: 2, 
+                  backgroundColor: theme.palette.warning.light,
+                  color: theme.palette.warning.contrastText,
+                  borderRadius: 1,
+                  border: `1px solid ${theme.palette.warning.main}`
+                }}
+              >
+                <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                  Server connection issues detected. Login may not work properly.
+                </Typography>
+                {apiStatus.message && (
+                  <Typography variant="caption" display="block" sx={{ mt: 1 }}>
+                    Details: {apiStatus.message}
+                  </Typography>
+                )}
+              </Paper>
+            )}
+            
+            {!error && apiStatus.checked && apiStatus.healthy && (
+              <Paper 
+                elevation={0}
+                sx={{ 
+                  p: 2, 
+                  backgroundColor: theme.palette.success.light,
+                  color: theme.palette.success.contrastText,
+                  borderRadius: 1,
+                  border: `1px solid ${theme.palette.success.main}`
+                }}
+              >
+                <Typography variant="body2" sx={{ fontWeight: 500 }}>
+                  Server connection established successfully.
+                </Typography>
+              </Paper>
+            )}
+          </Box>
 
           <form onSubmit={handleSubmit}>
             <TextField
@@ -280,4 +401,4 @@ const Login = () => {
   );
 };
 
-export default Login; 
+export default Login;

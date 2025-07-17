@@ -43,7 +43,8 @@ import {
 } from '@mui/icons-material';
 import { useNavigate, Link } from 'react-router-dom';
 import Header from '../common/Header';
-import { API_ENDPOINTS } from '../../config/api';
+import { API_ENDPOINTS, checkApiHealth } from '../../config/api';
+import ApiStatus from '../common/ApiStatus';
 import userService from '../../config/userService';
 import eventService from '../../config/eventService';
 
@@ -270,11 +271,20 @@ const AdminDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [exportingUser, setExportingUser] = useState(null);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [apiHealthy, setApiHealthy] = useState(true);
   const [notification, setNotification] = useState({
     open: false,
     message: '',
     severity: 'success'
   });
+  
+  // Handle API status changes
+  const handleApiStatusChange = (status) => {
+    setApiHealthy(status.healthy);
+    if (!status.healthy) {
+      showNotification('Server connection issues detected', 'warning');
+    }
+  };
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen);
@@ -295,6 +305,24 @@ const AdminDashboard = () => {
   }, [navigate]);
 
   const fetchUsers = useCallback(async () => {
+    // Check API health before fetching users
+    if (!apiHealthy) {
+      try {
+        const health = await checkApiHealth();
+        if (!health.healthy) {
+          console.error('API is not healthy, cannot fetch users:', health.error);
+          showNotification('Server connection issues. Please try again later.', 'error');
+          return;
+        }
+        // Update API status if it's now healthy
+        setApiHealthy(true);
+      } catch (e) {
+        console.error('Failed to check API health:', e);
+        showNotification('Cannot connect to server', 'error');
+        return;
+      }
+    }
+    
     try {
       const response = await fetch(API_ENDPOINTS.users.list, {
         headers: { 'Accept': 'application/json' }
@@ -305,12 +333,20 @@ const AdminDashboard = () => {
           handleAuthError();
           return;
         }
+        if (response.status >= 500) {
+          // Server error might indicate API health issues
+          setApiHealthy(false);
+          showNotification('Server error. Please try again later.', 'error');
+          return;
+        }
         throw new Error('Failed to fetch users');
       }
 
       const data = await response.json();
       setUsers(data || []);
     } catch (error) {
+      console.error('Error fetching users:', error);
+      setApiHealthy(false);
       showNotification(error.message, 'error');
     }
   }, [showNotification, handleAuthError]);
@@ -318,9 +354,39 @@ const AdminDashboard = () => {
   const fetchUserStats = useCallback(async () => {
     setLoading(true);
     try {
+      // Check API health before fetching stats
+      if (!apiHealthy) {
+        try {
+          const health = await checkApiHealth();
+          if (!health.healthy) {
+            console.error('API is not healthy, cannot fetch user stats:', health.error);
+            showNotification('Server connection issues. Please try again later.', 'error');
+            return;
+          }
+          // Update API status if it's now healthy
+          setApiHealthy(true);
+        } catch (e) {
+          console.error('Failed to check API health:', e);
+          showNotification('Cannot connect to server', 'error');
+          return;
+        }
+      }
+      
       // Get all users first
       const usersResponse = await fetch(API_ENDPOINTS.users.list);
-      if (!usersResponse.ok) throw new Error('Failed to fetch users');
+      if (!usersResponse.ok) {
+        if (usersResponse.status === 401 || usersResponse.status === 403) {
+          handleAuthError();
+          return;
+        }
+        if (usersResponse.status >= 500) {
+          // Server error might indicate API health issues
+          setApiHealthy(false);
+          showNotification('Server error. Please try again later.', 'error');
+          return;
+        }
+        throw new Error('Failed to fetch users');
+      }
       const users = await usersResponse.json();
       
       // Get stats for each user
@@ -346,6 +412,8 @@ const AdminDashboard = () => {
       
       setUserStats(statsObj);
     } catch (error) {
+      console.error('Error fetching user stats:', error);
+      setApiHealthy(false);
       showNotification(error.message, 'error');
     } finally {
       setLoading(false);
@@ -354,6 +422,24 @@ const AdminDashboard = () => {
 
   const exportUserData = async (userId, userName) => {
     setExportingUser(userId);
+    
+    // Check API health before exporting
+    if (!apiHealthy) {
+      try {
+        const health = await checkApiHealth();
+        if (!health.healthy) {
+          showNotification('Server connection issues. Please try again later.', 'error');
+          setExportingUser(null);
+          return;
+        }
+        // Update API status if it's now healthy
+        setApiHealthy(true);
+      } catch (e) {
+        showNotification('Cannot connect to server. Please try again later.', 'error');
+        setExportingUser(null);
+        return;
+      }
+    }
     
     try {
       const params = new URLSearchParams();
@@ -388,9 +474,21 @@ const AdminDashboard = () => {
         document.body.removeChild(a);
         showNotification(`${userName}'s attendance data exported successfully (${data.length} records)`, 'success');
       } else {
-        throw new Error(`Export failed: ${response.status}`);
+        if (response.status === 401 || response.status === 403) {
+          handleAuthError();
+          return;
+        }
+        if (response.status >= 500) {
+          // Server error might indicate API health issues
+          setApiHealthy(false);
+          showNotification('Server error. Please try again later.', 'error');
+        } else {
+          throw new Error(`Export failed: ${response.status}`);
+        }
       }
     } catch (error) {
+      console.error('Error exporting attendance data:', error);
+      setApiHealthy(false);
       showNotification(error.message, 'error');
     } finally {
       setExportingUser(null);
@@ -488,6 +586,10 @@ const AdminDashboard = () => {
           minHeight: '100vh'
         }}
       >
+        {/* API Status Component */}
+        <Box sx={{ mb: 2 }}>
+          <ApiStatus onStatusChange={handleApiStatusChange} showSuccessMessage={false} />
+        </Box>
         <Container maxWidth="xl">
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4, flexWrap: 'wrap', gap: 2 }}>
             <Typography 
@@ -671,4 +773,4 @@ const AdminDashboard = () => {
   );
 };
 
-export default AdminDashboard; 
+export default AdminDashboard;

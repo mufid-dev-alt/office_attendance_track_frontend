@@ -31,7 +31,8 @@ import PersonIcon from '@mui/icons-material/Person';
 import FormatListBulletedIcon from '@mui/icons-material/FormatListBulleted';
 import DownloadIcon from '@mui/icons-material/Download';
 import { useNavigate, Link } from 'react-router-dom';
-import { API_ENDPOINTS } from '../../config/api';
+import { API_ENDPOINTS, checkApiHealth } from '../../config/api';
+import ApiStatus from '../common/ApiStatus';
 
 const Header = ({ onMenuClick }) => {
   const navigate = useNavigate();
@@ -314,6 +315,7 @@ const UserDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [downloading, setDownloading] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [apiHealthy, setApiHealthy] = useState(true);
   const [selectedMonth, setSelectedMonth] = useState(() => {
     const stored = localStorage.getItem('selectedMonth');
     return stored ? parseInt(stored) : new Date().getMonth() + 1;
@@ -328,6 +330,11 @@ const UserDashboard = () => {
     completedTasks: 0,
     pendingTasks: 0
   });
+  
+  // Handle API status changes
+  const handleApiStatusChange = (status) => {
+    setApiHealthy(status.healthy);
+  };
 
   const months = [
     'January', 'February', 'March', 'April', 'May', 'June',
@@ -340,6 +347,24 @@ const UserDashboard = () => {
 
   const downloadMyAttendance = async () => {
     setDownloading(true);
+    
+    // Check API health before downloading
+    if (!apiHealthy) {
+      try {
+        const health = await checkApiHealth();
+        if (!health.healthy) {
+          alert('Server connection issues detected. Please try again later.');
+          setDownloading(false);
+          return;
+        }
+        // Update API status if it's now healthy
+        setApiHealthy(true);
+      } catch (e) {
+        alert('Cannot connect to server. Please try again later.');
+        setDownloading(false);
+        return;
+      }
+    }
     
     try {
       const userData = JSON.parse(localStorage.getItem('user'));
@@ -375,10 +400,18 @@ const UserDashboard = () => {
         document.body.removeChild(a);
         alert('Attendance data downloaded successfully');
       } else {
-        throw new Error(`Download failed: ${response.status}`);
+        if (response.status >= 500) {
+          // Server error might indicate API health issues
+          setApiHealthy(false);
+          alert(`Server error (${response.status}). Please try again later.`);
+        } else {
+          alert(`Download failed: ${response.status}`);
+        }
       }
     } catch (error) {
-      alert('Error downloading attendance data');
+      console.error('Error downloading attendance data:', error);
+      setApiHealthy(false);
+      alert('Error downloading attendance data. Please check your connection.');
     } finally {
       setDownloading(false);
     }
@@ -437,6 +470,18 @@ const UserDashboard = () => {
     // Fetch user stats
     const fetchStats = async () => {
       try {
+        // Check API health before fetching stats
+        if (!apiHealthy) {
+          const health = await checkApiHealth();
+          if (!health.healthy) {
+            console.error('API is not healthy, cannot fetch stats:', health.error);
+            setLoading(false);
+            return;
+          }
+          // Update API status if it's now healthy
+          setApiHealthy(true);
+        }
+        
         // Get attendance stats for current user
         const params = new URLSearchParams();
         params.append('user_id', userData.id);
@@ -448,6 +493,11 @@ const UserDashboard = () => {
         });
 
         if (!response.ok) {
+          console.error('Failed to fetch stats:', response.status);
+          if (response.status >= 500) {
+            // Server error might indicate API health issues
+            setApiHealthy(false);
+          }
           throw new Error('Failed to fetch stats');
         }
 
@@ -461,6 +511,9 @@ const UserDashboard = () => {
         let todosData = [];
         if (todosResponse.ok) {
           todosData = await todosResponse.json();
+        } else if (todosResponse.status >= 500) {
+          // Server error might indicate API health issues
+          setApiHealthy(false);
         }
         
         const completedTasks = todosData.filter(todo => todo.completed).length;
@@ -474,6 +527,7 @@ const UserDashboard = () => {
         });
       } catch (error) {
         console.error('Error fetching stats:', error);
+        setApiHealthy(false);
       } finally {
         setLoading(false);
       }
@@ -515,6 +569,10 @@ const UserDashboard = () => {
           backgroundColor: theme.palette.grey[50]
         }}
       >
+        {/* API Status Component */}
+        <Box sx={{ mb: 2 }}>
+          <ApiStatus onStatusChange={handleApiStatusChange} showSuccessMessage={false} />
+        </Box>
         <Container maxWidth="lg">
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4, flexWrap: 'wrap', gap: 2 }}>
           <Typography 
@@ -662,4 +720,4 @@ const UserDashboard = () => {
   );
 };
 
-export default UserDashboard; 
+export default UserDashboard;
