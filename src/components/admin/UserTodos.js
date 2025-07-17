@@ -71,7 +71,7 @@ const UserTodos = () => {
       const response = await fetch(API_ENDPOINTS.users.list);
       if (response.ok) {
         const data = await response.json();
-        const nonAdminUsers = data.filter(user => user.role !== 'admin');
+        const nonAdminUsers = Array.isArray(data.users) ? data.users.filter(user => user.role !== 'admin') : [];
         setUsers(nonAdminUsers);
         setFilteredUsers(nonAdminUsers);
       }
@@ -88,7 +88,7 @@ const UserTodos = () => {
       const response = await fetch(`${API_ENDPOINTS.todos.list}?user_id=${selectedUser.id}`);
       if (response.ok) {
         const data = await response.json();
-        setTodos(data || []);
+        setTodos(Array.isArray(data.todos) ? data.todos : []);
       }
     } catch (error) {
       showNotification('Error fetching todos', 'error');

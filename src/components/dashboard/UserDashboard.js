@@ -510,7 +510,8 @@ const UserDashboard = () => {
         
         let todosData = [];
         if (todosResponse.ok) {
-          todosData = await todosResponse.json();
+          const todosJson = await todosResponse.json();
+          todosData = Array.isArray(todosJson.todos) ? todosJson.todos : [];
         } else if (todosResponse.status >= 500) {
           // Server error might indicate API health issues
           setApiHealthy(false);

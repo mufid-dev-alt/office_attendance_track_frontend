@@ -343,7 +343,7 @@ const AdminDashboard = () => {
       }
 
       const data = await response.json();
-      setUsers(data || []);
+      setUsers(Array.isArray(data.users) ? data.users : []);
     } catch (error) {
       console.error('Error fetching users:', error);
       setApiHealthy(false);
@@ -387,7 +387,8 @@ const AdminDashboard = () => {
         }
         throw new Error('Failed to fetch users');
       }
-      const users = await usersResponse.json();
+      const usersResponseData = await usersResponse.json();
+      const users = Array.isArray(usersResponseData.users) ? usersResponseData.users : [];
       
       // Get stats for each user
       const statsPromises = users.map(async (user) => {
@@ -451,14 +452,15 @@ const AdminDashboard = () => {
 
       if (response.ok) {
         const data = await response.json();
-        if (!data || data.length === 0) {
+        const records = Array.isArray(data.records) ? data.records : [];
+        if (!records.length) {
           showNotification('No attendance data found for the selected period', 'warning');
           return;
         }
         
         // Get user details for proper Excel format
         const userDetails = users.find(u => u.id === userId);
-        const excelContent = convertToExcelFormat(data, userDetails);
+        const excelContent = convertToExcelFormat(records, userDetails);
         const blob = new Blob([excelContent], { type: 'text/csv;charset=utf-8;' });
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -472,7 +474,7 @@ const AdminDashboard = () => {
         a.click();
         window.URL.revokeObjectURL(url);
         document.body.removeChild(a);
-        showNotification(`${userName}'s attendance data exported successfully (${data.length} records)`, 'success');
+        showNotification(`${userName}'s attendance data exported successfully (${records.length} records)`, 'success');
       } else {
         if (response.status === 401 || response.status === 403) {
           handleAuthError();
