@@ -152,10 +152,6 @@ const AttendancePage = () => {
       setMessage(`Attendance marked as ${status} successfully!`);
       setTodayMarked(true);
       setTodayAttendanceId(data.id); // Set the ID for undo functionality
-      
-      // Force sync with backend to ensure data is persisted
-      await forceSync();
-      
       // Refresh attendance data
       await fetchAttendance();
     } catch (error) {
@@ -352,14 +348,7 @@ const AttendancePage = () => {
               My Attendance
         </Typography>
             <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-              <Button
-                variant="outlined"
-                color="secondary"
-                startIcon={<RefreshIcon />}
-                onClick={forceSync}
-              >
-                Sync Data
-              </Button>
+              
               <Button
                 variant="outlined"
                 startIcon={<DownloadIcon />}
