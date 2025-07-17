@@ -81,7 +81,7 @@ const TodoPage = () => {
       }
 
       const data = await response.json();
-      setTodos(data || []);
+      setTodos(Array.isArray(data) ? data : []);
     } catch (error) {
       showNotification(error.message, 'error');
     } finally {
@@ -301,7 +301,7 @@ const TodoPage = () => {
                 </Box>
               ) : (
                 <List>
-                {todos.map((todo, index) => (
+                {(Array.isArray(todos) ? todos : []).map((todo, index) => (
                   <React.Fragment key={todo.id}>
                     <ListItem sx={{ py: 2 }}>
                         <ListItemText
