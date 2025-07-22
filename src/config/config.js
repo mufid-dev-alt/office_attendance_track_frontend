@@ -4,7 +4,7 @@ const config = {
     API_BASE_URL: 'http://localhost:8000/api'
   },
   production: {
-    API_BASE_URL: 'https://office-attendance-track-backend.vercel.app/api'
+    API_BASE_URL: 'https://office-attendance-track-backend.onrender.com/api'
   }
 };
 
@@ -19,4 +19,4 @@ export const buildApiUrl = (endpoint) => {
   return `${API_BASE_URL}${endpoint.startsWith('/') ? endpoint : '/' + endpoint}`;
 };
 
-export default config[environment]; 
+export default config[environment];
