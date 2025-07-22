@@ -50,16 +50,31 @@ const Login = () => {
         method: 'GET',
         headers: {
           'Accept': 'application/json',
+          'Content-Type': 'application/json'
         },
-        credentials: 'include', // Include credentials for CORS
-        mode: 'cors'
+        // Don't use credentials or cors mode as they might cause issues with the hosted backend
+        // credentials: 'include',
+        // mode: 'cors'
       });
 
+      // Improved error handling
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        console.error(`HTTP error! status: ${response.status}`);
+        // Try to parse error response if possible
+        const errorText = await response.text();
+        let errorMessage = `Server error (${response.status})`;
+        try {
+          const errorData = JSON.parse(errorText);
+          errorMessage = errorData.message || errorMessage;
+        } catch (e) {
+          // If we can't parse the error as JSON, use the status text
+          errorMessage = response.statusText || errorMessage;
+        }
+        throw new Error(errorMessage);
       }
 
       const data = await response.json();
+      console.log('Login response data:', data);
 
       if (data && data.success && data.user) {
         if (activeTab === 'admin' && data.user.role !== 'admin') {
@@ -84,8 +99,15 @@ const Login = () => {
         console.error('Login failed:', errorMessage);
       }
     } catch (error) {
-      setError('Login failed. Please try again.');
-      console.error('Network or parsing error:', error);
+      console.error('Login error:', error);
+      // Provide a more specific error message if possible
+      if (error.message.includes('404')) {
+        setError('Login service not found. Please contact support.');
+      } else if (error.message.includes('Network')) {
+        setError('Network error. Please check your internet connection.');
+      } else {
+        setError(error.message || 'Login failed. Please try again.');
+      }
     } finally {
       setLoading(false);
     }

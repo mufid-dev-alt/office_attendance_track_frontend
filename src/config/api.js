@@ -1,7 +1,9 @@
 // API endpoints configuration with improved error handling and logging
 // Force using the production backend URL to ensure it's always correct
 const PROD_BACKEND_URL = 'https://office-attendance-track-backend.onrender.com';
-const BASE_URL = process.env.REACT_APP_API_URL || PROD_BACKEND_URL;
+// Remove any trailing slashes to prevent double-slash issues in URL paths
+const normalizeUrl = (url) => url.endsWith('/') ? url.slice(0, -1) : url;
+const BASE_URL = normalizeUrl(process.env.REACT_APP_API_URL || PROD_BACKEND_URL);
 
 // Log the base URL being used (will be removed in production)
 console.log('Environment:', process.env.NODE_ENV);
