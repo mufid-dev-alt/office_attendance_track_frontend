@@ -1,7 +1,7 @@
 // Configuration for different environments
 const config = {
   development: {
-    API_BASE_URL: 'http://localhost:8000/api'
+    API_BASE_URL: 'https://office-attendance-track-backend.onrender.com/api'
   },
   production: {
     API_BASE_URL: 'https://office-attendance-track-backend.onrender.com/api'
