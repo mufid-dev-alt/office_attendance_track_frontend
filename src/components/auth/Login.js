@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
   Box,
   Card,
@@ -9,14 +9,13 @@ import {
   InputAdornment,
   Paper,
   useTheme,
-  Link
 } from '@mui/material';
 import {
   Email as EmailIcon,
   Lock as LockIcon
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
-import { API_ENDPOINTS, checkApiHealth } from '../../config/api';
+import { API_ENDPOINTS } from '../../config/api';
 
 const Login = () => {
   const navigate = useNavigate();
@@ -28,42 +27,7 @@ const Login = () => {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [apiStatus, setApiStatus] = useState({ checked: false, healthy: true, message: null });
-  
-  // Check API health when component mounts
-  useEffect(() => {
-    const checkHealth = async () => {
-      setLoading(true);
-      try {
-        const health = await checkApiHealth();
-        if (!health.healthy) {
-          setApiStatus({ 
-            checked: true, 
-            healthy: false, 
-            message: `API connection issue: ${health.error || 'Unknown error'}` 
-          });
-          if (health.database && health.database.status === 'error') {
-            setError(`Database connection issue: ${health.database.error || 'Unknown database error'}`);
-          } else {
-            setError('Server connection issue. Please try again later.');
-          }
-        } else {
-          setApiStatus({ checked: true, healthy: true, message: null });
-        }
-      } catch (e) {
-        setApiStatus({ 
-          checked: true, 
-          healthy: false, 
-          message: `Failed to check API health: ${e.message}` 
-        });
-        setError('Cannot connect to server. Please try again later.');
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    checkHealth();
-  }, []);
+
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -243,52 +207,11 @@ const Login = () => {
                 <Typography variant="body2" sx={{ fontWeight: 500 }}>
                   {error}
                 </Typography>
-                {apiStatus.message && (
-                  <Typography variant="caption" display="block" sx={{ mt: 1 }}>
-                    Details: {apiStatus.message}
-                  </Typography>
-                )}
+
               </Paper>
             )}
             
-            {!error && !apiStatus.healthy && (
-              <Paper 
-                elevation={0}
-                sx={{ 
-                  p: 2, 
-                  backgroundColor: theme.palette.warning.light,
-                  color: theme.palette.warning.contrastText,
-                  borderRadius: 1,
-                  border: `1px solid ${theme.palette.warning.main}`
-                }}
-              >
-                <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                  Server connection issues detected. Login may not work properly.
-                </Typography>
-                {apiStatus.message && (
-                  <Typography variant="caption" display="block" sx={{ mt: 1 }}>
-                    Details: {apiStatus.message}
-                  </Typography>
-                )}
-              </Paper>
-            )}
-            
-            {!error && apiStatus.checked && apiStatus.healthy && (
-              <Paper 
-                elevation={0}
-                sx={{ 
-                  p: 2, 
-                  backgroundColor: theme.palette.success.light,
-                  color: theme.palette.success.contrastText,
-                  borderRadius: 1,
-                  border: `1px solid ${theme.palette.success.main}`
-                }}
-              >
-                <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                  Server connection established successfully.
-                </Typography>
-              </Paper>
-            )}
+
           </Box>
 
           <form onSubmit={handleSubmit}>
