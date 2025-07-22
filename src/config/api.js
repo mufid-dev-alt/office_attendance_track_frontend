@@ -1,9 +1,10 @@
 // API endpoints configuration
-const BASE_URL = process.env.REACT_APP_API_URL || 'https://office-attendance-track-backend.vercel.app';
+const BASE_URL = process.env.REACT_APP_API_URL || 'https://office-attendance-track-backend.onrender.com';
 
 // Utility function to check API health
 export const checkApiHealth = async () => {
   try {
+    console.log('Checking API health at:', `${BASE_URL}/api/health`);
     const response = await fetch(`${BASE_URL}/api/health`, {
       method: 'GET',
       headers: {
@@ -14,10 +15,12 @@ export const checkApiHealth = async () => {
     });
     
     if (!response.ok) {
+      console.error('API health check failed with status:', response.status);
       return { healthy: false, error: `HTTP error ${response.status}` };
     }
     
     const data = await response.json();
+    console.log('API health check response:', data);
     return { 
       healthy: data.status === 'healthy', 
       database: data.database,
@@ -56,6 +59,6 @@ export const API_ENDPOINTS = {
     delete: (todoId) => `${BASE_URL}/api/todos/${todoId}`,
   },
   health: {
-    check: `${BASE_URL}/health`,
+    check: `${BASE_URL}/api/health`,
   },
 };

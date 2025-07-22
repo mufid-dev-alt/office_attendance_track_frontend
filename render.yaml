@@ -1,0 +1,16 @@
+services:
+  # Frontend React application
+  - type: web
+    name: office-attendance-track-frontend
+    env: static
+    buildCommand: npm install && npm run build
+    staticPublishPath: ./build
+    envVars:
+      - key: REACT_APP_API_URL
+        value: https://office-attendance-track-backend.onrender.com
+      - key: NODE_ENV
+        value: production
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html

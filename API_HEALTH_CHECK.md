@@ -4,6 +4,10 @@
 
 This document describes the API health check implementation added to the Office Attendance Management System. The health check functionality helps detect and handle server connection issues gracefully, improving user experience when backend services are unavailable.
 
+## Render Deployment
+
+The application has been migrated from Vercel to Render. The health check endpoint has been updated to work with the new deployment platform. The backend API URL has been updated to `https://office-attendance-track-backend.onrender.com`.
+
 ## Components
 
 ### Backend Health Check Endpoint
