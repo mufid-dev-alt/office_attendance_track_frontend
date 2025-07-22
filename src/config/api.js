@@ -45,13 +45,14 @@ export const apiRequest = async (url, options = {}) => {
       ...options,
       headers: {
         'Content-Type': 'application/json',
+        'Accept': 'application/json',
         ...options.headers,
       },
     });
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.message || 'API request failed');
+      throw new Error(errorData.message || `API request failed with status ${response.status}`);
     }
 
     return await response.json();
