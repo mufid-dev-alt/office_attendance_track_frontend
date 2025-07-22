@@ -1,5 +1,10 @@
-// API endpoints configuration
+// API endpoints configuration with improved error handling and logging
 const BASE_URL = process.env.REACT_APP_API_URL || 'https://office-attendance-track-backend.onrender.com';
+
+// Log the base URL being used (will be removed in production)
+if (process.env.NODE_ENV !== 'production') {
+  console.log('Using API base URL:', BASE_URL);
+}
 
 export const API_ENDPOINTS = {
   // User management
@@ -27,5 +32,27 @@ export const API_ENDPOINTS = {
     update: (todoId) => `${BASE_URL}/api/todos/${todoId}`,
     delete: (todoId) => `${BASE_URL}/api/todos/${todoId}`,
   },
+};
 
+// Add a utility function for making API requests with better error handling
+export const apiRequest = async (url, options = {}) => {
+  try {
+    const response = await fetch(url, {
+      ...options,
+      headers: {
+        'Content-Type': 'application/json',
+        ...options.headers,
+      },
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.message || 'API request failed');
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('API request error:', error);
+    throw error;
+  }
 };

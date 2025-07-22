@@ -9,6 +9,7 @@ import {
   InputAdornment,
   Paper,
   useTheme,
+  CircularProgress
 } from '@mui/material';
 import {
   Email as EmailIcon,
@@ -35,18 +36,23 @@ const Login = () => {
     setError('');
 
     if (!formData.email || !formData.password) {
-      setError('Please fill both fields');
+      setError('Please fill in both email and password');
       setLoading(false);
       return;
     }
 
     try {
-      const response = await fetch(`${API_ENDPOINTS.auth.login}?email=${formData.email}&password=${formData.password}`, {
+      // URL encode the credentials to handle special characters
+      const loginUrl = `${API_ENDPOINTS.auth.login}?email=${encodeURIComponent(formData.email)}&password=${encodeURIComponent(formData.password)}`;
+      console.log('Attempting login to:', loginUrl);
+      
+      const response = await fetch(loginUrl, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
         },
+        credentials: 'include', // Include credentials for CORS
         mode: 'cors'
       });
 
