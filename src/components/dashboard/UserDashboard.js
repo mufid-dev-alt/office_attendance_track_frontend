@@ -21,7 +21,9 @@ import {
   FormControl,
   InputLabel,
   Select,
-  MenuItem
+  MenuItem,
+  Snackbar,
+  Alert
 } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import LogoutIcon from '@mui/icons-material/ExitToApp';
@@ -32,6 +34,7 @@ import FormatListBulletedIcon from '@mui/icons-material/FormatListBulleted';
 import DownloadIcon from '@mui/icons-material/Download';
 import { useNavigate, Link } from 'react-router-dom';
 import { API_ENDPOINTS } from '../../config/api';
+import eventService from '../../config/eventService';
 
 const Header = ({ onMenuClick }) => {
   const navigate = useNavigate();
@@ -328,6 +331,11 @@ const UserDashboard = () => {
     completedTasks: 0,
     pendingTasks: 0
   });
+  const [notification, setNotification] = useState({
+    open: false,
+    message: '',
+    severity: 'info'
+  });
 
   const months = [
     'January', 'February', 'March', 'April', 'May', 'June',
@@ -338,15 +346,31 @@ const UserDashboard = () => {
     setMobileOpen(!mobileOpen);
   };
 
+  const showNotification = (message, severity = 'info') => {
+    setNotification({
+      open: true,
+      message,
+      severity
+    });
+  };
+
   const downloadMyAttendance = async () => {
     setDownloading(true);
     
     try {
       const userData = JSON.parse(localStorage.getItem('user'));
+      if (!userData) {
+        showNotification('User data not found. Please log in again.', 'error');
+        navigate('/');
+        return;
+      }
+
       const params = new URLSearchParams();
       params.append('user_id', userData.id);
       params.append('month', selectedMonth);
       params.append('year', selectedYear);
+      
+      console.log('Fetching attendance data from:', `${API_ENDPOINTS.attendance.list}?${params.toString()}`);
       
       const response = await fetch(`${API_ENDPOINTS.attendance.list}?${params.toString()}`, {
         headers: { 'Accept': 'application/json' }
@@ -354,13 +378,16 @@ const UserDashboard = () => {
 
       if (response.ok) {
         const data = await response.json();
-        if (!data || data.length === 0) {
-          alert('No attendance data found for the selected period');
+        const records = Array.isArray(data) ? data : [];
+        
+        if (records.length === 0) {
+          showNotification('No attendance data found for the selected period', 'warning');
+          setDownloading(false);
           return;
         }
         
         // Convert to Excel-like CSV format
-        const excelContent = convertToExcelFormat(data, userData);
+        const excelContent = convertToExcelFormat(records, userData);
         const blob = new Blob([excelContent], { type: 'text/csv;charset=utf-8;' });
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -373,18 +400,18 @@ const UserDashboard = () => {
         a.click();
         window.URL.revokeObjectURL(url);
         document.body.removeChild(a);
-        alert('Attendance data downloaded successfully');
+        showNotification('Attendance data downloaded successfully', 'success');
       } else {
         if (response.status >= 500) {
           // Server error might indicate API health issues
-          alert(`Server error (${response.status}). Please try again later.`);
+          showNotification(`Server error (${response.status}). Please try again later.`, 'error');
         } else {
-          alert(`Download failed: ${response.status}`);
+          showNotification(`Download failed: ${response.status}`, 'error');
         }
       }
     } catch (error) {
       console.error('Error downloading attendance data:', error);
-      alert('Error downloading attendance data. Please check your connection.');
+      showNotification('Error downloading attendance data. Please check your connection.', 'error');
     } finally {
       setDownloading(false);
     }
@@ -412,27 +439,6 @@ const UserDashboard = () => {
     return csv;
   };
 
-  const convertToCSV = (data) => {
-    // This function is kept for backward compatibility but not used
-    if (!data || data.length === 0) {
-      return 'No data available';
-    }
-    
-    const headers = Object.keys(data[0]);
-    const csvHeaders = headers.join(',');
-    const csvRows = data.map(row => 
-      headers.map(header => {
-        const value = row[header];
-        if (typeof value === 'string' && (value.includes(',') || value.includes('"') || value.includes('\n'))) {
-          return `"${value.replace(/"/g, '""')}"`;
-        }
-        return value || '';
-      }).join(',')
-    );
-    
-    return [csvHeaders, ...csvRows].join('\n');
-  };
-
   useEffect(() => {
     const userData = JSON.parse(localStorage.getItem('user'));
     if (!userData) {
@@ -442,6 +448,7 @@ const UserDashboard = () => {
 
     // Fetch user stats
     const fetchStats = async () => {
+      setLoading(true);
       try {
         // Get attendance stats for current user
         const params = new URLSearchParams();
@@ -449,18 +456,22 @@ const UserDashboard = () => {
         params.append('month', selectedMonth);
         params.append('year', selectedYear);
         
+        console.log('Fetching attendance stats from:', `${API_ENDPOINTS.attendance.stats}?${params.toString()}`);
+        
         const response = await fetch(`${API_ENDPOINTS.attendance.stats}?${params.toString()}`, {
           headers: { 'Accept': 'application/json' }
         });
 
         if (!response.ok) {
           console.error('Failed to fetch stats:', response.status);
-          throw new Error('Failed to fetch stats');
+          throw new Error(`Failed to fetch stats: ${response.status}`);
         }
 
         const attendanceData = await response.json();
+        console.log('Attendance stats received:', attendanceData);
         
         // Get todos for current user
+        console.log('Fetching todos from:', `${API_ENDPOINTS.todos.list}?user_id=${userData.id}`);
         const todosResponse = await fetch(`${API_ENDPOINTS.todos.list}?user_id=${userData.id}`, {
           headers: { 'Accept': 'application/json' }
         });
@@ -468,7 +479,11 @@ const UserDashboard = () => {
         let todosData = [];
         if (todosResponse.ok) {
           const todosJson = await todosResponse.json();
-          todosData = Array.isArray(todosJson.todos) ? todosJson.todos : [];
+          console.log('Todos data received:', todosJson);
+          todosData = Array.isArray(todosJson) ? todosJson : 
+                     (todosJson.todos ? todosJson.todos : []);
+        } else {
+          console.error('Failed to fetch todos:', todosResponse.status);
         }
         
         const completedTasks = todosData.filter(todo => todo.completed).length;
@@ -482,6 +497,7 @@ const UserDashboard = () => {
         });
       } catch (error) {
         console.error('Error fetching stats:', error);
+        showNotification(`Error fetching data: ${error.message}`, 'error');
       } finally {
         setLoading(false);
       }
@@ -496,8 +512,19 @@ const UserDashboard = () => {
       }
     };
 
+    // Also listen for events from the event service
+    const unsubscribe = eventService.listen((eventType, data) => {
+      if (eventType === 'attendance_updated' && data.userId === userData.id) {
+        console.log('Attendance update detected via event service, refreshing stats');
+        fetchStats();
+      }
+    });
+
     window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      unsubscribe();
+    };
   }, [navigate, selectedMonth, selectedYear]);
 
   if (loading) {
@@ -667,6 +694,21 @@ const UserDashboard = () => {
           </Grid>
         </Container>
       </Box>
+
+      <Snackbar
+        open={notification.open}
+        autoHideDuration={6000}
+        onClose={() => setNotification({ ...notification, open: false })}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      >
+        <Alert
+          onClose={() => setNotification({ ...notification, open: false })}
+          severity={notification.severity}
+          sx={{ width: '100%' }}
+        >
+          {notification.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };

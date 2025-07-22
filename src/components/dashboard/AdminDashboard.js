@@ -2,60 +2,57 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   Box,
   Container,
+  Grid,
   Paper,
   Typography,
-  Button,
-  Grid,
   Card,
   CardContent,
-  CardActions,
+  CircularProgress,
+  Drawer,
+  List,
+  ListItem,
+  ListItemIcon,
+  ListItemText,
+  AppBar,
+  Toolbar,
+  Button,
+  IconButton,
+  useTheme,
   FormControl,
   InputLabel,
   Select,
   MenuItem,
   Avatar,
-  Chip,
-  IconButton,
-  Tooltip,
-  useTheme,
   Snackbar,
-  Alert,
-  CircularProgress,
-  Divider,
-  List,
-  ListItem,
-  ListItemIcon,
-  ListItemText,
-  Drawer,
-  AppBar,
-  Toolbar
+  Alert
 } from '@mui/material';
-import {
-  Download as DownloadIcon,
-  Refresh as RefreshIcon,
-  Menu as MenuIcon,
-  Dashboard as DashboardIcon,
-  EventNote as EventNoteIcon,
-  ListAlt as ListAltIcon,
-  People as PeopleIcon,
-  ExitToApp as LogoutIcon,
-  Warning as WarningIcon
-} from '@mui/icons-material';
+import MenuIcon from '@mui/icons-material/Menu';
+import LogoutIcon from '@mui/icons-material/ExitToApp';
+import DashboardIcon from '@mui/icons-material/Dashboard';
+import EventAvailableIcon from '@mui/icons-material/EventAvailable';
+import PersonIcon from '@mui/icons-material/Person';
+import FormatListBulletedIcon from '@mui/icons-material/FormatListBulleted';
+import DownloadIcon from '@mui/icons-material/Download';
+import RefreshIcon from '@mui/icons-material/Refresh';
 import { useNavigate, Link } from 'react-router-dom';
-import Header from '../common/Header';
 import { API_ENDPOINTS } from '../../config/api';
-import userService from '../../config/userService';
 import eventService from '../../config/eventService';
 
-// Admin Header Component
 const AdminHeader = ({ onMenuClick }) => {
   const navigate = useNavigate();
   const user = JSON.parse(localStorage.getItem('user'));
   const theme = useTheme();
 
-  const handleLogout = () => {
-    localStorage.removeItem('user');
-    navigate('/');
+  const handleLogout = async () => {
+    try {
+      // Simple local logout since we don't have sessions
+      localStorage.removeItem('user');
+      navigate('/');
+    } catch (error) {
+      // Continue with local logout even if server logout fails
+      localStorage.removeItem('user');
+      navigate('/');
+    }
   };
 
   return (
@@ -83,18 +80,20 @@ const AdminHeader = ({ onMenuClick }) => {
           variant="h6" 
           component="div" 
           sx={{ 
-            flexGrow: 1,
+            flexGrow: 1, 
+            fontFamily: "'Poppins', sans-serif",
             fontWeight: 600,
             color: 'white'
           }}
         >
-          Office Attendance Management - Admin
+          Admin Dashboard
         </Typography>
         {user && (
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             <Typography 
               variant="subtitle1" 
               sx={{ 
+                fontFamily: "'Poppins', sans-serif",
                 color: 'white',
                 fontWeight: 500,
                 display: { xs: 'none', sm: 'inline' }
@@ -133,15 +132,14 @@ const AdminHeader = ({ onMenuClick }) => {
   );
 };
 
-// Sidebar Component
 const Sidebar = ({ open, onClose }) => {
   const theme = useTheme();
 
   const menuItems = [
     { text: 'Dashboard', icon: <DashboardIcon />, path: '/admin' },
-    { text: 'Attendance Records', icon: <EventNoteIcon />, path: '/admin/attendance-records' },
-    { text: 'User Todos', icon: <ListAltIcon />, path: '/admin/user-todos' },
-    { text: 'Manage Users', icon: <PeopleIcon />, path: '/admin/manage-users' }
+    { text: 'Attendance Records', icon: <EventAvailableIcon />, path: '/admin/attendance' },
+    { text: 'User Todos', icon: <FormatListBulletedIcon />, path: '/admin/todos' },
+    { text: 'Manage Users', icon: <PersonIcon />, path: '/admin/users' }
   ];
 
   const drawerWidth = 240;
@@ -161,11 +159,11 @@ const Sidebar = ({ open, onClose }) => {
           '& .MuiDrawer-paper': {
             boxSizing: 'border-box',
             width: drawerWidth,
-            top: 64
           },
         }}
       >
-        <Box sx={{ overflow: 'auto', mt: 2 }}>
+        <Toolbar />
+        <Box sx={{ overflow: 'auto' }}>
           <List>
             {menuItems.map((item) => (
               <ListItem
@@ -213,12 +211,12 @@ const Sidebar = ({ open, onClose }) => {
             boxSizing: 'border-box',
             width: drawerWidth,
             backgroundColor: theme.palette.background.default,
-            borderRight: `1px solid ${theme.palette.divider}`,
-            top: 64
+            borderRight: `1px solid ${theme.palette.divider}`
           },
         }}
         open
       >
+        <Toolbar />
         <Box sx={{ overflow: 'auto', mt: 2 }}>
           <List>
             {menuItems.map((item) => (
@@ -265,171 +263,189 @@ const AdminDashboard = () => {
   const navigate = useNavigate();
   const [users, setUsers] = useState([]);
   const [userStats, setUserStats] = useState({});
-  const [selectedMonth, setSelectedMonth] = useState(0); // All Time to show all data
-  const [selectedYear, setSelectedYear] = useState(0);
+  const [selectedMonth, setSelectedMonth] = useState(() => {
+    const stored = localStorage.getItem('adminSelectedMonth');
+    return stored ? parseInt(stored) : new Date().getMonth() + 1;
+  });
+  const [selectedYear, setSelectedYear] = useState(() => {
+    const stored = localStorage.getItem('adminSelectedYear');
+    return stored ? parseInt(stored) : new Date().getFullYear();
+  });
   const [loading, setLoading] = useState(true);
-  const [exportingUser, setExportingUser] = useState(null);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [notification, setNotification] = useState({
     open: false,
     message: '',
-    severity: 'success'
+    severity: 'info'
   });
-
-  const handleDrawerToggle = () => {
-    setMobileOpen(!mobileOpen);
-  };
 
   const months = [
     'January', 'February', 'March', 'April', 'May', 'June',
     'July', 'August', 'September', 'October', 'November', 'December'
   ];
 
-  const showNotification = useCallback((message, severity) => {
-    setNotification({ open: true, message, severity });
+  const handleDrawerToggle = () => {
+    setMobileOpen(!mobileOpen);
+  };
+
+  const showNotification = useCallback((message, severity = 'info') => {
+    setNotification({
+      open: true,
+      message,
+      severity
+    });
   }, []);
 
-  const handleAuthError = useCallback(() => {
-    localStorage.removeItem('user');
-    navigate('/');
-  }, [navigate]);
-
   const fetchUsers = useCallback(async () => {
-    
     try {
+      console.log('Fetching users from:', API_ENDPOINTS.users.list);
       const response = await fetch(API_ENDPOINTS.users.list, {
+        headers: { 'Accept': 'application/json' }
+      });
+      
+      if (!response.ok) {
+        if (response.status === 401) {
+          // Unauthorized, redirect to login
+          localStorage.removeItem('user');
+          navigate('/');
+          return [];
+        }
+        throw new Error(`Failed to fetch users: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      console.log('Users data received:', data);
+      
+      // Filter out admin users if needed
+      const usersList = Array.isArray(data) ? data.filter(user => user.role !== 'admin') : [];
+      setUsers(usersList);
+      return usersList;
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      showNotification(`Error fetching users: ${error.message}`, 'error');
+      return [];
+    }
+  }, [navigate, showNotification]);
+
+  const fetchUserStats = useCallback(async (usersList) => {
+    setLoading(true);
+    try {
+      const usersToProcess = usersList || users;
+      if (!usersToProcess.length) {
+        setLoading(false);
+        return;
+      }
+
+      const statsPromises = usersToProcess.map(async (user) => {
+        const params = new URLSearchParams();
+        params.append('user_id', user.id);
+        params.append('month', selectedMonth);
+        params.append('year', selectedYear);
+        
+        console.log('Fetching stats for user:', user.id, 'from:', `${API_ENDPOINTS.attendance.stats}?${params.toString()}`);
+        
+        try {
+          const response = await fetch(`${API_ENDPOINTS.attendance.stats}?${params.toString()}`, {
+            headers: { 'Accept': 'application/json' }
+          });
+          
+          if (!response.ok) {
+            if (response.status === 401) {
+              // Handle auth error
+              throw new Error('Authentication failed');
+            }
+            throw new Error(`Server responded with ${response.status}`);
+          }
+          
+          const data = await response.json();
+          console.log('Stats received for user:', user.id, data);
+          return { userId: user.id, stats: data };
+        } catch (error) {
+          console.error(`Error fetching stats for user ${user.id}:`, error);
+          return { userId: user.id, stats: { present_days: 0, absent_days: 0, total_days: 0 } };
+        }
+      });
+
+      const results = await Promise.all(statsPromises);
+      const statsMap = {};
+      results.forEach(result => {
+        statsMap[result.userId] = result.stats;
+      });
+
+      setUserStats(statsMap);
+    } catch (error) {
+      console.error('Error fetching user stats:', error);
+      showNotification(`Error fetching attendance data: ${error.message}`, 'error');
+    } finally {
+      setLoading(false);
+    }
+  }, [users, selectedMonth, selectedYear, showNotification]);
+
+  const exportUserData = async (userId, userName) => {
+    try {
+      const params = new URLSearchParams();
+      params.append('user_id', userId);
+      params.append('month', selectedMonth);
+      params.append('year', selectedYear);
+      
+      console.log('Exporting attendance for user:', userId, 'from:', `${API_ENDPOINTS.attendance.list}?${params.toString()}`);
+      
+      const response = await fetch(`${API_ENDPOINTS.attendance.list}?${params.toString()}`, {
         headers: { 'Accept': 'application/json' }
       });
 
       if (!response.ok) {
-        if (response.status === 401 || response.status === 403) {
+        if (response.status === 401) {
           handleAuthError();
           return;
         }
-        if (response.status >= 500) {
-          showNotification('Server error. Please try again later.', 'error');
-          return;
-        }
-        throw new Error('Failed to fetch users');
+        throw new Error(`Server responded with ${response.status}`);
       }
 
       const data = await response.json();
-      setUsers(Array.isArray(data.users) ? data.users : []);
-    } catch (error) {
-      console.error('Error fetching users:', error);
-      showNotification(error.message, 'error');
-    }
-  }, [showNotification, handleAuthError]);
-
-  const fetchUserStats = useCallback(async () => {
-    setLoading(true);
-    try {
+      const records = Array.isArray(data) ? data : [];
       
-      // Get all users first
-      const usersResponse = await fetch(API_ENDPOINTS.users.list);
-      if (!usersResponse.ok) {
-        if (usersResponse.status === 401 || usersResponse.status === 403) {
-          handleAuthError();
-          return;
-        }
-        if (usersResponse.status >= 500) {
-          showNotification('Server error. Please try again later.', 'error');
-          return;
-        }
-        throw new Error('Failed to fetch users');
+      if (records.length === 0) {
+        showNotification(`No attendance data found for ${userName}`, 'warning');
+        return;
       }
-      const usersResponseData = await usersResponse.json();
-      const users = Array.isArray(usersResponseData.users) ? usersResponseData.users : [];
-      
-      // Get stats for each user
-      const statsPromises = users.map(async (user) => {
-        const params = new URLSearchParams();
-        params.append('user_id', user.id);
-        if (selectedMonth > 0) params.append('month', selectedMonth);
-        if (selectedYear > 0) params.append('year', selectedYear);
-        
-        const response = await fetch(`${API_ENDPOINTS.attendance.stats}?${params.toString()}`);
-        if (response.ok) {
-          const stats = await response.json();
-          return { userId: user.id, ...stats };
-        }
-        return { userId: user.id, total_days: 0, present_days: 0, absent_days: 0, attendance_rate: 0 };
-      });
-      
-      const allStats = await Promise.all(statsPromises);
-      const statsObj = {};
-      allStats.forEach(stat => {
-        statsObj[stat.userId] = stat;
-      });
-      
-      setUserStats(statsObj);
-    } catch (error) {
-      console.error('Error fetching user stats:', error);
-      showNotification(error.message, 'error');
-    } finally {
-      setLoading(false);
-    }
-  }, [selectedMonth, selectedYear, showNotification, handleAuthError]);
 
-  const exportUserData = async (userId, userName) => {
-    setExportingUser(userId);
-    
-    try {
-      const params = new URLSearchParams();
-      params.append('user_id', userId);
-      if (selectedMonth > 0) params.append('month', selectedMonth);
-      if (selectedYear > 0) params.append('year', selectedYear);
-      
-      const response = await fetch(`${API_ENDPOINTS.attendance.list}?${params.toString()}`);
-
-      if (response.ok) {
-        const data = await response.json();
-        const records = Array.isArray(data.records) ? data.records : [];
-        if (!records.length) {
-          showNotification('No attendance data found for the selected period', 'warning');
-          return;
-        }
-        
-        // Get user details for proper Excel format
-        const userDetails = users.find(u => u.id === userId);
-        const excelContent = convertToExcelFormat(records, userDetails);
-        const blob = new Blob([excelContent], { type: 'text/csv;charset=utf-8;' });
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        
-        // Generate filename based on filter
-        const timeRange = selectedMonth === 0 || selectedYear === 0 ? 'AllTime' : `${months[selectedMonth - 1]}_${selectedYear}`;
-        a.download = `${userName.replace(/\s+/g, '_')}_${timeRange}_Attendance.csv`;
-        
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
-        showNotification(`${userName}'s attendance data exported successfully (${records.length} records)`, 'success');
-      } else {
-        if (response.status === 401 || response.status === 403) {
-          handleAuthError();
-          return;
-        }
-        if (response.status >= 500) {
-          showNotification('Server error. Please try again later.', 'error');
-        } else {
-          throw new Error(`Export failed: ${response.status}`);
-        }
+      // Find the user object
+      const user = users.find(u => u.id === userId);
+      if (!user) {
+        throw new Error('User not found');
       }
+
+      // Convert to Excel-like CSV format
+      const excelContent = convertToExcelFormat(records, user);
+      const blob = new Blob([excelContent], { type: 'text/csv;charset=utf-8;' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      
+      const monthName = months[selectedMonth - 1];
+      a.download = `${user.full_name.replace(/\s+/g, '_')}_${monthName}_${selectedYear}_Attendance.csv`;
+      
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      showNotification(`Attendance data for ${userName} downloaded successfully`, 'success');
     } catch (error) {
-      console.error('Error exporting attendance data:', error);
-      showNotification(error.message, 'error');
-    } finally {
-      setExportingUser(null);
+      console.error('Error exporting user data:', error);
+      showNotification(`Error exporting data: ${error.message}`, 'error');
     }
   };
 
-  const convertToExcelFormat = (data, userDetails) => {
+  const handleAuthError = () => {
+    localStorage.removeItem('user');
+    navigate('/');
+  };
+
+  const convertToExcelFormat = (data, userData) => {
     // Create header rows matching the My Attendance format
-    let csv = `USERNAME - ${userDetails?.full_name || 'Unknown User'}\n`;
-    csv += `USER-EMAIL - ${userDetails?.email || 'Unknown Email'}\n`;
+    let csv = `USERNAME - ${userData.full_name}\n`;
+    csv += `USER-EMAIL - ${userData.email}\n`;
     csv += `DATE,DAY,ATTENDANCE\n`;
     
     // Sort data by date
@@ -448,35 +464,22 @@ const AdminDashboard = () => {
     return csv;
   };
 
-  const convertToCSV = (data) => {
-    // This function is kept for backward compatibility but not used
-    if (!data || data.length === 0) {
-      return 'No data available';
-    }
-    
-    const headers = Object.keys(data[0]);
-    const csvHeaders = headers.join(',');
-    const csvRows = data.map(row => 
-      headers.map(header => {
-        const value = row[header];
-        // Properly escape values that contain commas, quotes, or newlines
-        if (typeof value === 'string' && (value.includes(',') || value.includes('"') || value.includes('\n'))) {
-          return `"${value.replace(/"/g, '""')}"`;
-        }
-        return value || '';
-      }).join(',')
-    );
-    
-    return [csvHeaders, ...csvRows].join('\n');
+  const getUserInitials = (name) => {
+    if (!name) return 'U';
+    return name.split(' ')
+      .map(part => part[0])
+      .join('')
+      .toUpperCase();
   };
 
-  const getInitials = (name) => {
-    return name.split(' ').map(n => n[0]).join('').toUpperCase();
-  };
-
-  const getAttendanceRate = (present, total) => {
-    if (total === 0) return 0;
-    return Math.round((present / total) * 100);
+  const getAttendanceRate = (userId) => {
+    const stats = userStats[userId];
+    if (!stats) return 0;
+    
+    const totalDays = stats.total_days || (stats.present_days + stats.absent_days);
+    if (totalDays === 0) return 0;
+    
+    return Math.round((stats.present_days / totalDays) * 100);
   };
 
   useEffect(() => {
@@ -485,49 +488,78 @@ const AdminDashboard = () => {
       navigate('/');
       return;
     }
-    fetchUsers();
-  }, [fetchUsers, navigate]);
 
-  useEffect(() => {
-    if (users.length > 0) {
-      fetchUserStats();
+    const loadData = async () => {
+      const usersList = await fetchUsers();
+      await fetchUserStats(usersList);
+    };
+
+    loadData();
+    
+    // Listen for user updates from other components
+    const unsubscribe = eventService.listen((eventType, data) => {
+      if (['user_added', 'user_deleted', 'user_updated'].includes(eventType)) {
+        console.log(`${eventType} event detected, refreshing users`);
+        loadData();
+      } else if (eventType === 'attendance_updated') {
+        console.log('Attendance update detected, refreshing stats');
+        fetchUserStats();
+      }
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, [navigate, selectedMonth, selectedYear, fetchUsers, fetchUserStats]);
+
+  const handleRefresh = async () => {
+    setLoading(true);
+    try {
+      const usersList = await fetchUsers();
+      await fetchUserStats(usersList);
+      showNotification('Data refreshed successfully', 'success');
+    } catch (error) {
+      console.error('Error refreshing data:', error);
+      showNotification('Error refreshing data', 'error');
+    } finally {
+      setLoading(false);
     }
-  }, [users, fetchUserStats]);
-
-  const refreshData = () => {
-    fetchUsers();
-    fetchUserStats();
   };
 
-  // No auto-refresh or event-based refresh
+  if (loading && users.length === 0) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
 
   return (
-    <Box sx={{ display: 'flex' }}>
+    <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: 'background.default' }}>
       <AdminHeader onMenuClick={handleDrawerToggle} />
       <Sidebar open={mobileOpen} onClose={handleDrawerToggle} />
-      <Box 
-        component="main" 
-        sx={{ 
-          flexGrow: 1, 
-          p: { xs: 2, md: 3 }, 
-          mt: 8, 
+      <Box
+        component="main"
+        sx={{
+          flexGrow: 1,
+          p: 3,
+          mt: 8,
           width: { sm: `calc(100% - 240px)` },
           ml: { sm: '240px' },
-          backgroundColor: theme.palette.grey[50], 
-          minHeight: '100vh'
+          backgroundColor: theme.palette.grey[50]
         }}
       >
-
-        <Container maxWidth="xl">
+        <Container maxWidth="lg">
           <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4, flexWrap: 'wrap', gap: 2 }}>
             <Typography 
               variant="h4" 
               sx={{ 
+                fontFamily: "'Poppins', sans-serif",
                 fontWeight: 600,
                 color: theme.palette.text.primary
               }}
             >
-              Admin Dashboard
+              Employee Attendance Overview
             </Typography>
             
             <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
@@ -536,11 +568,13 @@ const AdminDashboard = () => {
                 <Select
                   value={selectedMonth}
                   label="Month"
-                  onChange={(e) => setSelectedMonth(e.target.value)}
+                  onChange={(e) => {
+                    setSelectedMonth(e.target.value);
+                    localStorage.setItem('adminSelectedMonth', e.target.value);
+                  }}
                 >
-                  <MenuItem value={0}>All Time</MenuItem>
                   {months.map((month, index) => (
-                    <MenuItem key={index} value={index + 1}>
+                    <MenuItem key={index + 1} value={index + 1}>
                       {month}
                     </MenuItem>
                   ))}
@@ -552,9 +586,11 @@ const AdminDashboard = () => {
                 <Select
                   value={selectedYear}
                   label="Year"
-                  onChange={(e) => setSelectedYear(e.target.value)}
+                  onChange={(e) => {
+                    setSelectedYear(e.target.value);
+                    localStorage.setItem('adminSelectedYear', e.target.value);
+                  }}
                 >
-                  <MenuItem value={0}>All Time</MenuItem>
                   {[2024, 2025, 2026].map(year => (
                     <MenuItem key={year} value={year}>
                       {year}
@@ -562,141 +598,152 @@ const AdminDashboard = () => {
                   ))}
                 </Select>
               </FormControl>
-              
-              <Tooltip title="Refresh Data">
-                <IconButton onClick={refreshData} color="primary">
-                  <RefreshIcon />
-                </IconButton>
-              </Tooltip>
+
+              <Button
+                variant="outlined"
+                startIcon={<RefreshIcon />}
+                onClick={handleRefresh}
+                disabled={loading}
+                sx={{ height: 40 }}
+              >
+                {loading ? 'Refreshing...' : 'Refresh'}
+              </Button>
             </Box>
           </Box>
 
-          {/* User Cards Section */}
-          <Paper sx={{ p: 3, mb: 3 }}>
-            <Typography variant="h6" sx={{ fontWeight: 600, mb: 3 }}>
-              Employee Attendance - {selectedMonth === 0 || selectedYear === 0 ? 'All Time' : `${months[selectedMonth - 1]} ${selectedYear}`}
-            </Typography>
-            
-            {loading ? (
-              <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
-                <CircularProgress />
-              </Box>
-            ) : (
-              <Grid container spacing={3}>
-                {users.filter(user => user.role !== 'admin').map((user) => {
-                  const stats = userStats[user.id] || { present_days: 0, absent_days: 0, total_days: 0 };
-                  const attendanceRate = getAttendanceRate(stats.present_days, stats.total_days);
-                  
-                  return (
-                    <Grid item xs={12} sm={6} md={4} lg={3} key={user.id}>
-                      <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-                        <CardContent sx={{ flexGrow: 1 }}>
-                          <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                            <Avatar 
+          {loading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
+              <CircularProgress />
+            </Box>
+          ) : users.length === 0 ? (
+            <Paper sx={{ p: 3, textAlign: 'center' }}>
+              <Typography variant="h6">No employees found</Typography>
+            </Paper>
+          ) : (
+            <Grid container spacing={3}>
+              {users.map(user => {
+                const stats = userStats[user.id] || { present_days: 0, absent_days: 0, total_days: 0 };
+                const totalDays = stats.total_days || (stats.present_days + stats.absent_days);
+                const attendanceRate = getAttendanceRate(user.id);
+                
+                return (
+                  <Grid item xs={12} sm={6} md={4} key={user.id}>
+                    <Card sx={{ 
+                      height: '100%',
+                      boxShadow: theme.shadows[2],
+                      transition: 'transform 0.2s, box-shadow 0.2s',
+                      '&:hover': {
+                        transform: 'translateY(-4px)',
+                        boxShadow: theme.shadows[4]
+                      }
+                    }}>
+                      <CardContent>
+                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                          <Avatar 
+                            sx={{ 
+                              bgcolor: theme.palette.primary.main,
+                              width: 50,
+                              height: 50,
+                              fontSize: '1.2rem',
+                              fontWeight: 600
+                            }}
+                          >
+                            {getUserInitials(user.full_name)}
+                          </Avatar>
+                          <Box sx={{ ml: 2 }}>
+                            <Typography 
+                              variant="h6" 
                               sx={{ 
-                                bgcolor: theme.palette.primary.main, 
-                                mr: 2,
-                                width: 50,
-                                height: 50
+                                fontFamily: "'Poppins', sans-serif",
+                                fontWeight: 600,
+                                lineHeight: 1.2
                               }}
                             >
-                              {getInitials(user.full_name)}
-                            </Avatar>
-                            <Box>
-                              <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                                {user.full_name}
-                              </Typography>
-                              <Typography variant="body2" color="textSecondary">
-                                {user.email}
-                              </Typography>
-                            </Box>
+                              {user.full_name}
+                            </Typography>
+                            <Typography 
+                              variant="body2" 
+                              color="text.secondary"
+                              sx={{ 
+                                fontFamily: "'Poppins', sans-serif",
+                              }}
+                            >
+                              {user.email}
+                            </Typography>
                           </Box>
-                          
-                          <Divider sx={{ my: 2 }} />
-                          
-                          <Box sx={{ mb: 2 }}>
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                              <Typography variant="body2" color="textSecondary">
-                                Present Days
-                              </Typography>
-                              <Chip 
-                                label={stats.present_days} 
-                                color="success" 
-                                size="small"
-                              />
-                            </Box>
-                            
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                              <Typography variant="body2" color="textSecondary">
-                                Absent Days
-                              </Typography>
-                              <Chip 
-                                label={stats.absent_days} 
-                                color="error" 
-                                size="small"
-                              />
-                            </Box>
-                            
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                              <Typography variant="body2" color="textSecondary">
-                                Total Days
-                              </Typography>
-                              <Chip 
-                                label={stats.total_days} 
-                                color="default" 
-                                size="small"
-                              />
-                            </Box>
-                            
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                              <Typography variant="body2" color="textSecondary">
-                                Attendance Rate
-                              </Typography>
-                              <Chip 
-                                label={`${attendanceRate}%`} 
-                                color={attendanceRate >= 80 ? 'success' : attendanceRate >= 60 ? 'warning' : 'error'} 
-                                size="small"
-                              />
-                            </Box>
-                          </Box>
-                        </CardContent>
+                        </Box>
                         
-                        <CardActions sx={{ p: 2, pt: 0 }}>
-                          <Button
-                            fullWidth
-                            variant="contained"
-                            startIcon={<DownloadIcon />}
-                            onClick={() => exportUserData(user.id, user.full_name)}
-                            disabled={exportingUser === user.id}
-                            size="small"
-                          >
-                            {exportingUser === user.id ? 'Exporting...' : 'Export Excel'}
-                          </Button>
-                        </CardActions>
-                      </Card>
-                    </Grid>
-                  );
-                })}
-              </Grid>
-            )}
-          </Paper>
+                        <Grid container spacing={2} sx={{ mt: 1 }}>
+                          <Grid item xs={6}>
+                            <Typography variant="body2" color="text.secondary">Present</Typography>
+                            <Typography variant="h6" sx={{ color: theme.palette.success.main, fontWeight: 600 }}>
+                              {stats.present_days || 0}
+                            </Typography>
+                          </Grid>
+                          <Grid item xs={6}>
+                            <Typography variant="body2" color="text.secondary">Absent</Typography>
+                            <Typography variant="h6" sx={{ color: theme.palette.error.main, fontWeight: 600 }}>
+                              {stats.absent_days || 0}
+                            </Typography>
+                          </Grid>
+                          <Grid item xs={6}>
+                            <Typography variant="body2" color="text.secondary">Total Days</Typography>
+                            <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                              {totalDays || 0}
+                            </Typography>
+                          </Grid>
+                          <Grid item xs={6}>
+                            <Typography variant="body2" color="text.secondary">Attendance</Typography>
+                            <Typography variant="h6" sx={{ 
+                              fontWeight: 600,
+                              color: attendanceRate >= 75 ? theme.palette.success.main : 
+                                     attendanceRate >= 50 ? theme.palette.warning.main : 
+                                     theme.palette.error.main
+                            }}>
+                              {attendanceRate}%
+                            </Typography>
+                          </Grid>
+                        </Grid>
+                        
+                        <Button
+                          fullWidth
+                          variant="contained"
+                          startIcon={<DownloadIcon />}
+                          onClick={() => exportUserData(user.id, user.full_name)}
+                          sx={{ 
+                            mt: 3,
+                            background: 'linear-gradient(135deg, #1e3c72 0%, #2a5298 100%)',
+                            '&:hover': {
+                              background: 'linear-gradient(135deg, #1a3366 0%, #234785 100%)',
+                            }
+                          }}
+                        >
+                          Export Excel
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  </Grid>
+                );
+              })}
+            </Grid>
+          )}
         </Container>
-
-        <Snackbar 
-          open={notification.open} 
-          autoHideDuration={6000} 
-          onClose={() => setNotification({ ...notification, open: false })}
-          anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
-        >
-          <Alert 
-            onClose={() => setNotification({ ...notification, open: false })} 
-            severity={notification.severity} 
-            sx={{ width: '100%' }}
-          >
-            {notification.message}
-          </Alert>
-        </Snackbar>
       </Box>
+
+      <Snackbar
+        open={notification.open}
+        autoHideDuration={6000}
+        onClose={() => setNotification({ ...notification, open: false })}
+        anchorOrigin={{ vertical: 'top', horizontal: 'center' }}
+      >
+        <Alert
+          onClose={() => setNotification({ ...notification, open: false })}
+          severity={notification.severity}
+          sx={{ width: '100%' }}
+        >
+          {notification.message}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };
