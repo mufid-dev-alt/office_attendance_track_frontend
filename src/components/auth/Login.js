@@ -47,14 +47,12 @@ const Login = () => {
       console.log('Attempting login to:', loginUrl);
       
       const response = await fetch(loginUrl, {
-        method: 'POST',
+        method: 'GET',
         headers: {
-          'Content-Type': 'application/json',
           'Accept': 'application/json',
         },
         credentials: 'include', // Include credentials for CORS
-        mode: 'cors',
-        body: JSON.stringify(formData)
+        mode: 'cors'
       });
 
       if (!response.ok) {
