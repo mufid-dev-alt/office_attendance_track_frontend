@@ -1,10 +1,12 @@
 // API endpoints configuration with improved error handling and logging
-const BASE_URL = process.env.REACT_APP_API_URL || 'https://office-attendance-track-backend.onrender.com';
+// Force using the production backend URL to ensure it's always correct
+const PROD_BACKEND_URL = 'https://office-attendance-track-backend.onrender.com';
+const BASE_URL = process.env.REACT_APP_API_URL || PROD_BACKEND_URL;
 
 // Log the base URL being used (will be removed in production)
-if (process.env.NODE_ENV !== 'production') {
-  console.log('Using API base URL:', BASE_URL);
-}
+console.log('Environment:', process.env.NODE_ENV);
+console.log('Using API base URL:', BASE_URL);
+console.log('REACT_APP_API_URL:', process.env.REACT_APP_API_URL);
 
 export const API_ENDPOINTS = {
   // User management

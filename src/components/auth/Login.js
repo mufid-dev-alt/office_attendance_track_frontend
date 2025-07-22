@@ -42,19 +42,24 @@ const Login = () => {
     }
 
     try {
-      // URL encode the credentials to handle special characters
+      // Log the URL being called for debugging
       const loginUrl = `${API_ENDPOINTS.auth.login}?email=${encodeURIComponent(formData.email)}&password=${encodeURIComponent(formData.password)}`;
       console.log('Attempting login to:', loginUrl);
       
       const response = await fetch(loginUrl, {
-        method: 'GET',
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
         },
         credentials: 'include', // Include credentials for CORS
-        mode: 'cors'
+        mode: 'cors',
+        body: JSON.stringify(formData)
       });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
 
       const data = await response.json();
 
