@@ -25,7 +25,7 @@ class UserService {
       }
 
       // Always fetch from backend to ensure latest data
-      const response = await fetch(API_ENDPOINTS.USERS);
+      const response = await fetch(API_ENDPOINTS.users.list);
       const data = await response.json();
       
       if (!data.success) {
@@ -48,7 +48,7 @@ class UserService {
   // Add a new user
   async addUser(userData) {
     try {
-      const response = await fetch(API_ENDPOINTS.USERS, {
+      const response = await fetch(API_ENDPOINTS.users.create, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -78,7 +78,7 @@ class UserService {
   // Delete a user
   async deleteUser(userId) {
     try {
-      const response = await fetch(`${API_ENDPOINTS.USERS}/${userId}`, {
+      const response = await fetch(API_ENDPOINTS.users.delete(userId), {
         method: 'DELETE',
       });
 
@@ -97,6 +97,60 @@ class UserService {
     } catch (error) {
       console.error('Error deleting user:', error);
       this.notifyListeners('user_delete_error', error, this.users);
+      throw error;
+    }
+  }
+
+  // Restore a deleted user
+  async restoreUser(userId) {
+    try {
+      const response = await fetch(API_ENDPOINTS.users.undo(userId), {
+        method: 'POST',
+      });
+
+      const data = await response.json();
+      
+      if (!data.success) {
+        throw new Error(data.message || 'Failed to restore user');
+      }
+
+      // Update local state by adding the restored user back
+      if (data.user) {
+        this.users.push(data.user);
+        this.saveToLocalStorage();
+        this.notifyListeners('user_restored', { userId, restoredUser: data.user }, this.users);
+      }
+      
+      return data;
+    } catch (error) {
+      console.error('Error restoring user:', error);
+      this.notifyListeners('user_restore_error', error, this.users);
+      throw error;
+    }
+  }
+
+  // Permanently delete a user
+  async permanentlyDeleteUser(userId) {
+    try {
+      const response = await fetch(API_ENDPOINTS.users.permanentDelete(userId), {
+        method: 'POST',
+      });
+
+      const data = await response.json();
+      
+      if (!data.success) {
+        throw new Error(data.message || 'Failed to permanently delete user');
+      }
+
+      // Update local state
+      this.users = this.users.filter(user => user.id !== userId);
+      this.saveToLocalStorage();
+      this.notifyListeners('user_permanently_deleted', { userId }, this.users);
+      
+      return data;
+    } catch (error) {
+      console.error('Error permanently deleting user:', error);
+      this.notifyListeners('user_permanent_delete_error', error, this.users);
       throw error;
     }
   }
@@ -153,7 +207,7 @@ class UserService {
     try {
       this.notifyListeners('sync_start', null, this.users);
       
-      const response = await fetch(API_ENDPOINTS.USERS);
+      const response = await fetch(API_ENDPOINTS.users.list);
       const data = await response.json();
       
       if (!data.success) {

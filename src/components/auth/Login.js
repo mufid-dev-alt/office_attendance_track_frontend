@@ -16,7 +16,7 @@ import {
   Lock as LockIcon
 } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
-import { API_ENDPOINTS } from '../../config/api';
+import { API_ENDPOINTS, apiRequest } from '../../config/api';
 
 const Login = () => {
   const navigate = useNavigate();
@@ -42,51 +42,29 @@ const Login = () => {
     }
 
     try {
-      // Log the URL being called for debugging
-      const loginUrl = `${API_ENDPOINTS.auth.login}?email=${encodeURIComponent(formData.email)}&password=${encodeURIComponent(formData.password)}`;
-      console.log('Attempting login to:', loginUrl);
-      
-      const response = await fetch(loginUrl, {
-        method: 'GET',
-        headers: {
-          'Accept': 'application/json',
-          'Content-Type': 'application/json'
-        },
-        // Don't use credentials or cors mode as they might cause issues with the hosted backend
-        // credentials: 'include',
-        // mode: 'cors'
-      });
-
-      // Improved error handling
-      if (!response.ok) {
-        console.error(`HTTP error! status: ${response.status}`);
-        // Try to parse error response if possible
-        const errorText = await response.text();
-        let errorMessage = `Server error (${response.status})`;
-        try {
-          const errorData = JSON.parse(errorText);
-          errorMessage = errorData.message || errorMessage;
-        } catch (e) {
-          // If we can't parse the error as JSON, use the status text
-          errorMessage = response.statusText || errorMessage;
-        }
-        throw new Error(errorMessage);
+      const loginUrl = API_ENDPOINTS.auth.login;
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('Attempting login to:', loginUrl);
       }
 
-      const data = await response.json();
-      console.log('Login response data:', data);
+      const data = await apiRequest(loginUrl, {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password,
+          role: activeTab, // 'user' or 'admin'
+        }),
+      });
+
+      if (process.env.NODE_ENV !== 'production') {
+        console.log('Login response data:', data);
+      }
 
       if (data && data.success && data.user) {
-        if (activeTab === 'admin' && data.user.role !== 'admin') {
-          setError('Admin access required. Please use User login.');
-          setLoading(false);
-          return;
-        }
-        if (activeTab === 'user' && data.user.role === 'admin') {
-          setError('Please use Admin login for administrative access.');
-          setLoading(false);
-          return;
-        }
         localStorage.setItem('user', JSON.stringify(data.user));
         if (data.user.role === 'admin') {
           navigate('/admin');
@@ -101,9 +79,9 @@ const Login = () => {
     } catch (error) {
       console.error('Login error:', error);
       // Provide a more specific error message if possible
-      if (error.message.includes('404')) {
+      if (error.message && error.message.includes('404')) {
         setError('Login service not found. Please contact support.');
-      } else if (error.message.includes('Network')) {
+      } else if (error.message && error.message.includes('Network')) {
         setError('Network error. Please check your internet connection.');
       } else {
         setError(error.message || 'Login failed. Please try again.');
@@ -303,7 +281,11 @@ const Login = () => {
                 }
               }}
             >
-              {loading ? 'Signing in...' : 'Sign In'}
+              {loading ? (
+                <CircularProgress size={24} color="inherit" />
+              ) : (
+                'Sign In'
+              )}
             </Button>
           </form>
 

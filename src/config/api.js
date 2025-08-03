@@ -1,14 +1,10 @@
 // API endpoints configuration with improved error handling and logging
-// Force using the production backend URL to ensure it's always correct
-const PROD_BACKEND_URL = 'https://office-attendance-track-backend.onrender.com';
-// Remove any trailing slashes to prevent double-slash issues in URL paths
-const normalizeUrl = (url) => url.endsWith('/') ? url.slice(0, -1) : url;
-const BASE_URL = normalizeUrl(process.env.REACT_APP_API_URL || PROD_BACKEND_URL);
+const BASE_URL = process.env.REACT_APP_API_URL || 'https://office-attendance-track-backend.onrender.com';
 
 // Log the base URL being used (will be removed in production)
-console.log('Environment:', process.env.NODE_ENV);
-console.log('Using API base URL:', BASE_URL);
-console.log('REACT_APP_API_URL:', process.env.REACT_APP_API_URL);
+if (process.env.NODE_ENV !== 'production') {
+  console.log('Using API base URL:', BASE_URL);
+}
 
 export const API_ENDPOINTS = {
   // User management
@@ -45,14 +41,13 @@ export const apiRequest = async (url, options = {}) => {
       ...options,
       headers: {
         'Content-Type': 'application/json',
-        'Accept': 'application/json',
         ...options.headers,
       },
     });
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.message || `API request failed with status ${response.status}`);
+      throw new Error(errorData.message || 'API request failed');
     }
 
     return await response.json();

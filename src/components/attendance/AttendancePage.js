@@ -60,7 +60,7 @@ const AttendancePage = () => {
   const forceSync = async () => {
     try {
       setMessage('Syncing attendance data...');
-      const response = await fetch(`${API_ENDPOINTS.attendance.base}/force-sync`, {
+      const response = await fetch(API_ENDPOINTS.attendance.sync, {
         method: 'POST',
         headers: { 'Accept': 'application/json' }
       });

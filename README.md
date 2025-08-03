@@ -1,5 +1,7 @@
 # Office Attendance Tracker Frontend
 
+**Hosted Frontend URL:** https://office-attendance-track-frontend.onrender.com/
+
 React frontend for Office Attendance Tracker application.
 
 ## Deployment
