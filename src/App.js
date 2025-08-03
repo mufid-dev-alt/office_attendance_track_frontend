@@ -127,6 +127,22 @@ const App = () => {
               </AdminRoute>
             }
       />
+      <Route
+            path="/admin/users"
+            element={
+              <AdminRoute>
+                <ManageUsers />
+              </AdminRoute>
+            }
+      />
+      <Route
+            path="/admin/todos"
+            element={
+              <AdminRoute>
+                <UserTodos />
+              </AdminRoute>
+            }
+      />
         </Routes>
       </Router>
     </ThemeProvider>

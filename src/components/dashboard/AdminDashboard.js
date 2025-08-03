@@ -510,7 +510,7 @@ const AdminDashboard = () => {
     return () => {
       unsubscribe();
     };
-  }, [navigate, selectedMonth, selectedYear, fetchUsers, fetchUserStats]);
+  }, [navigate, selectedMonth, selectedYear]);
 
   const handleRefresh = async () => {
     setLoading(true);

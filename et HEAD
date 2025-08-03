@@ -1,0 +1,9 @@
+warning: in the working copy of 'src/components/attendance/AttendancePage.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/components/auth/Login.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/config/api.js', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'src/config/userService.js', LF will be replaced by CRLF the next time Git touches it
+README.md
+src/components/attendance/AttendancePage.js
+src/components/auth/Login.js
+src/config/api.js
+src/config/userService.js
