@@ -1,10 +1,10 @@
 // API endpoints configuration with improved error handling and logging
-const BASE_URL = process.env.REACT_APP_API_URL || 'https://office-attendance-track-backend.onrender.com';
+const BASE_URL = (process.env.REACT_APP_API_URL || 'https://office-attendance-track-backend.onrender.com').replace(/\/+$/, '');
 
-// Log the base URL being used (for debugging only)
-if (process.env.NODE_ENV === 'development') {
-  console.log('Using API base URL:', BASE_URL);
-}
+// Log the base URL being used (for debugging)
+console.log('Using API base URL:', BASE_URL);
+console.log('Environment:', process.env.NODE_ENV);
+console.log('Raw REACT_APP_API_URL:', process.env.REACT_APP_API_URL);
 
 export const API_ENDPOINTS = {
   // User management
@@ -34,9 +34,14 @@ export const API_ENDPOINTS = {
   },
 };
 
+// Log the login endpoint for debugging
+console.log('Login endpoint URL:', API_ENDPOINTS.auth.login);
+
 // Utility function for making API requests with error handling
 export const apiRequest = async (url, options = {}) => {
   try {
+    console.log('Making API request to:', url);
+    console.log('Request options:', options);
     const response = await fetch(url, {
       ...options,
       headers: {
