@@ -127,22 +127,6 @@ const App = () => {
               </AdminRoute>
             }
       />
-      <Route
-            path="/admin/users"
-            element={
-              <AdminRoute>
-                <ManageUsers />
-              </AdminRoute>
-            }
-      />
-      <Route
-            path="/admin/todos"
-            element={
-              <AdminRoute>
-                <UserTodos />
-              </AdminRoute>
-            }
-      />
       {/* Catch-all route for handling deep links and page refresh */}
       <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

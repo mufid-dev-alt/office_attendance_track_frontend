@@ -202,7 +202,7 @@ const UserTodos = () => {
       return;
     }
     fetchUsers();
-  }, [fetchUsers, navigate]);
+  }, [navigate]);
 
   // Auto-refresh users every 30 seconds to catch updates
   useEffect(() => {
@@ -211,7 +211,7 @@ const UserTodos = () => {
     }, 30000); // 30 seconds
 
     return () => clearInterval(interval);
-  }, [fetchUsers]);
+  }, []);
 
   // Only fetch users on component mount and via refresh button
 
@@ -219,7 +219,7 @@ const UserTodos = () => {
     if (selectedUser) {
       fetchUserTodos();
     }
-  }, [fetchUserTodos]);
+  }, [selectedUser]);
 
   useEffect(() => {
     const filtered = users.filter(user => 

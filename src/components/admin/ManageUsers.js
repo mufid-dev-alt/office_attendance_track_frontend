@@ -236,7 +236,7 @@ const ManageUsers = () => {
     });
     
     return () => unsubscribe();
-  }, [fetchUsers, navigate, showNotification]);
+  }, [navigate]);
 
   // Update current time every second for the countdown timer
   useEffect(() => {

@@ -137,9 +137,9 @@ const Sidebar = ({ open, onClose }) => {
 
   const menuItems = [
     { text: 'Dashboard', icon: <DashboardIcon />, path: '/admin' },
-    { text: 'Attendance Records', icon: <EventAvailableIcon />, path: '/admin/attendance' },
-    { text: 'User Todos', icon: <FormatListBulletedIcon />, path: '/admin/todos' },
-    { text: 'Manage Users', icon: <PersonIcon />, path: '/admin/users' }
+    { text: 'Attendance Records', icon: <EventAvailableIcon />, path: '/admin/attendance-records' },
+    { text: 'User Todos', icon: <FormatListBulletedIcon />, path: '/admin/user-todos' },
+    { text: 'Manage Users', icon: <PersonIcon />, path: '/admin/manage-users' }
   ];
 
   const drawerWidth = 240;
