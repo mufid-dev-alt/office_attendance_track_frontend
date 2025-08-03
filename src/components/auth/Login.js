@@ -42,18 +42,6 @@ const Login = () => {
     }
 
     try {
-      // Test if backend is accessible first
-      try {
-        const healthCheck = await fetch(`${API_ENDPOINTS.auth.login.replace('/api/login', '/ping')}`);
-        if (!healthCheck.ok) {
-          throw new Error('Backend not accessible');
-        }
-      } catch (healthError) {
-        setError('Cannot connect to server. Please try again later.');
-        setLoading(false);
-        return;
-      }
-
       const loginUrl = API_ENDPOINTS.auth.login;
       const data = await apiRequest(loginUrl, {
         method: 'POST',
