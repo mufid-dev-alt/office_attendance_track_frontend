@@ -43,9 +43,8 @@ const Login = () => {
 
     try {
       const loginUrl = API_ENDPOINTS.auth.login;
-      if (process.env.NODE_ENV !== 'production') {
-        console.log('Attempting login to:', loginUrl);
-      }
+      console.log('Attempting login to:', loginUrl);
+      console.log('Login payload:', { email: formData.email, role: activeTab });
 
       const data = await apiRequest(loginUrl, {
         method: 'POST',
@@ -60,9 +59,7 @@ const Login = () => {
         }),
       });
 
-      if (process.env.NODE_ENV !== 'production') {
-        console.log('Login response data:', data);
-      }
+      console.log('Login response data:', data);
 
       if (data && data.success && data.user) {
         localStorage.setItem('user', JSON.stringify(data.user));
