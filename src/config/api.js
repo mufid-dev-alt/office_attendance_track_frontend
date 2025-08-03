@@ -1,10 +1,10 @@
 // API endpoints configuration with improved error handling and logging
 const BASE_URL = process.env.REACT_APP_API_URL || 'https://office-attendance-track-backend.onrender.com';
 
-// Log the base URL being used for debugging
-console.log('Using API base URL:', BASE_URL);
-console.log('Environment:', process.env.NODE_ENV);
-console.log('REACT_APP_API_URL:', process.env.REACT_APP_API_URL);
+// Log the base URL being used (for debugging only)
+if (process.env.NODE_ENV === 'development') {
+  console.log('Using API base URL:', BASE_URL);
+}
 
 export const API_ENDPOINTS = {
   // User management
@@ -34,12 +34,9 @@ export const API_ENDPOINTS = {
   },
 };
 
-// Add a utility function for making API requests with better error handling
+// Utility function for making API requests with error handling
 export const apiRequest = async (url, options = {}) => {
   try {
-    console.log('Making API request to:', url);
-    console.log('Request options:', options);
-    
     const response = await fetch(url, {
       ...options,
       headers: {
@@ -48,26 +45,20 @@ export const apiRequest = async (url, options = {}) => {
       },
     });
 
-    console.log('Response status:', response.status);
-    console.log('Response headers:', response.headers);
-
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('Error response body:', errorText);
       let errorData = {};
       try {
         errorData = JSON.parse(errorText);
       } catch (e) {
-        console.error('Could not parse error response as JSON');
+        // If not JSON, use status text
       }
       throw new Error(errorData.message || `HTTP ${response.status}: ${response.statusText}`);
     }
 
-    const responseData = await response.json();
-    console.log('Successful response data:', responseData);
-    return responseData;
+    return await response.json();
   } catch (error) {
-    console.error('API request error:', error);
+    console.error('API request failed:', error.message);
     throw error;
   }
 };

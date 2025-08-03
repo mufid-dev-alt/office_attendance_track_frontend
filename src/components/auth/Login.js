@@ -23,8 +23,8 @@ const Login = () => {
   const theme = useTheme();
   const [activeTab, setActiveTab] = useState('user'); // 'user' or 'admin'
   const [formData, setFormData] = useState({
-    email: '',
-    password: ''
+    email: 'user1@company.com',
+    password: 'user123'
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -42,10 +42,19 @@ const Login = () => {
     }
 
     try {
-      const loginUrl = API_ENDPOINTS.auth.login;
-      console.log('Attempting login to:', loginUrl);
-      console.log('Login payload:', { email: formData.email, role: activeTab });
+      // Test if backend is accessible first
+      try {
+        const healthCheck = await fetch(`${API_ENDPOINTS.auth.login.replace('/api/login', '/ping')}`);
+        if (!healthCheck.ok) {
+          throw new Error('Backend not accessible');
+        }
+      } catch (healthError) {
+        setError('Cannot connect to server. Please try again later.');
+        setLoading(false);
+        return;
+      }
 
+      const loginUrl = API_ENDPOINTS.auth.login;
       const data = await apiRequest(loginUrl, {
         method: 'POST',
         headers: {
@@ -59,7 +68,7 @@ const Login = () => {
         }),
       });
 
-      console.log('Login response data:', data);
+
 
       if (data && data.success && data.user) {
         localStorage.setItem('user', JSON.stringify(data.user));
@@ -99,7 +108,12 @@ const Login = () => {
 
   const switchTab = (tab) => {
     setActiveTab(tab);
-    setFormData({ email: '', password: '' });
+    // Pre-fill with test credentials based on tab
+    if (tab === 'admin') {
+      setFormData({ email: 'admin@company.com', password: 'admin123' });
+    } else {
+      setFormData({ email: 'user1@company.com', password: 'user123' });
+    }
     setError('');
   };
 
