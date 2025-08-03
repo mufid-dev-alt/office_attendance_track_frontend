@@ -23,8 +23,8 @@ const Login = () => {
   const theme = useTheme();
   const [activeTab, setActiveTab] = useState('user'); // 'user' or 'admin'
   const [formData, setFormData] = useState({
-    email: 'user1@company.com',
-    password: 'user123'
+    email: '',
+    password: ''
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -96,12 +96,8 @@ const Login = () => {
 
   const switchTab = (tab) => {
     setActiveTab(tab);
-    // Pre-fill with test credentials based on tab
-    if (tab === 'admin') {
-      setFormData({ email: 'admin@company.com', password: 'admin123' });
-    } else {
-      setFormData({ email: 'user1@company.com', password: 'user123' });
-    }
+    // Clear form data when switching tabs
+    setFormData({ email: '', password: '' });
     setError('');
   };
 

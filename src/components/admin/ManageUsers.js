@@ -81,7 +81,10 @@ const ManageUsers = () => {
     setLoading(true);
     try {
       const usersList = await userService.getUsers();
-      setUsers(usersList.filter(user => user.role !== 'admin'));
+      const filteredUsers = usersList.filter(user => user.role !== 'admin');
+      // Sort users by full name alphabetically
+      const sortedUsers = filteredUsers.sort((a, b) => a.full_name.localeCompare(b.full_name));
+      setUsers(sortedUsers);
       setServerSyncStatus('synced');
     } catch (error) {
       console.error('Error fetching users:', error);

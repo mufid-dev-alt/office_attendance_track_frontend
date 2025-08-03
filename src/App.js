@@ -143,6 +143,8 @@ const App = () => {
               </AdminRoute>
             }
       />
+      {/* Catch-all route for handling deep links and page refresh */}
+      <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </Router>
     </ThemeProvider>

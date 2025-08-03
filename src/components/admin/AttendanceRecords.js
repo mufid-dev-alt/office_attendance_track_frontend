@@ -243,7 +243,7 @@ const AttendanceRecords = () => {
       return;
     }
     fetchUsers();
-  }, [fetchUsers, navigate]);
+  }, [navigate]);
 
   // Auto-refresh users every 30 seconds to catch updates
   useEffect(() => {
@@ -252,7 +252,7 @@ const AttendanceRecords = () => {
     }, 30000); // 30 seconds
 
     return () => clearInterval(interval);
-  }, [fetchUsers]);
+  }, []);
 
   // Listen for user updates from user service
   useEffect(() => {
@@ -276,7 +276,7 @@ const AttendanceRecords = () => {
     if (selectedUser) {
       fetchUserAttendance();
     }
-  }, [fetchUserAttendance, selectedUser]);
+  }, [selectedUser]);
 
   useEffect(() => {
     const filtered = users.filter(user => 
