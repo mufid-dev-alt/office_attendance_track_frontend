@@ -316,8 +316,11 @@ const AdminDashboard = () => {
       const data = await response.json();
       console.log('Users data received:', data);
       
+      // Handle the backend response structure {success: true, users: [...]}
+      const usersArray = data.success && data.users ? data.users : (Array.isArray(data) ? data : []);
+      
       // Filter out admin users if needed
-      const usersList = Array.isArray(data) ? data.filter(user => user.role !== 'admin') : [];
+      const usersList = usersArray.filter(user => user.role !== 'admin');
       setUsers(usersList);
       return usersList;
     } catch (error) {
