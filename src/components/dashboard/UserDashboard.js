@@ -378,7 +378,7 @@ const UserDashboard = () => {
 
       if (response.ok) {
         const data = await response.json();
-        const records = Array.isArray(data) ? data : [];
+        const records = data.success && data.records ? data.records : (Array.isArray(data) ? data : []);
         
         if (records.length === 0) {
           showNotification('No attendance data found for the selected period', 'warning');

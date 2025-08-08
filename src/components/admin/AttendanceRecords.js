@@ -312,6 +312,26 @@ const AttendanceRecords = () => {
   const absentDays = calendarData.filter(day => day.status === 'absent').length;
   const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
+  // Add useEffect hooks for data fetching
+  useEffect(() => {
+    const userData = JSON.parse(localStorage.getItem('user'));
+    if (!userData || userData.role !== 'admin') {
+      navigate('/');
+      return;
+    }
+    fetchUsers();
+  }, [fetchUsers, navigate]);
+
+  useEffect(() => {
+    if (selectedUser) {
+      fetchUserAttendance();
+    }
+  }, [selectedUser, fetchUserAttendance]);
+
+  useEffect(() => {
+    fetchUsers();
+  }, [searchQuery, fetchUsers]);
+
   return (
     <>
       <Header />
