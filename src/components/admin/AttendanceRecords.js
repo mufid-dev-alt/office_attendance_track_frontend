@@ -109,7 +109,10 @@ const AttendanceRecords = () => {
       const response = await fetch(`${API_ENDPOINTS.attendance.list}?${params.toString()}`);
       if (response.ok) {
         const data = await response.json();
-        setAttendanceData(Array.isArray(data.records) ? data.records : []);
+        console.log('Attendance data received:', data);
+        const records = Array.isArray(data.records) ? data.records : [];
+        console.log('Processed attendance records:', records);
+        setAttendanceData(records);
       }
     } catch (error) {
       showNotification('Error fetching attendance data', 'error');

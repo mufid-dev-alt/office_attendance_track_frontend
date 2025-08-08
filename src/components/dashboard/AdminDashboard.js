@@ -406,7 +406,10 @@ const AdminDashboard = () => {
       }
 
       const data = await response.json();
+      console.log('Export data received:', data);
       const records = data.success && data.records ? data.records : (Array.isArray(data) ? data : []);
+      
+      console.log('Processed records:', records);
       
       if (records.length === 0) {
         showNotification(`No attendance data found for ${userName}`, 'warning');
